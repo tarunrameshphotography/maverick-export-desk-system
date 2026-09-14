@@ -84,6 +84,26 @@ def test_rbi_fema_export_rule_still_counts():
     assert _analyze("RBI notifies FEMA export realisation rules for exporters").direct_effect == "true"
 
 
+def test_institute_event_announcement_is_not_an_exporter_effect():
+    # "Indian Institute of Foreign Trade" trips the generic TRADE_RELEVANCE
+    # phrase "foreign trade" purely as part of an institution's name; a campus
+    # conclave announcement carries no actual trade-policy content.
+    exp = _analyze(
+        "Indian Institute of Foreign Trade GIFT City Campus Hosts NEXUS 2026: Connecting Talent, "
+        "Technology & Global Business, a leadership Conclave"
+    )
+    assert exp.direct_effect == "uncertain"
+
+
+def test_conclave_with_real_duty_content_still_counts():
+    # The event-noise filter must not suppress a genuine trade-policy story
+    # just because it also happens to mention a conclave/summit.
+    exp = _analyze(
+        "At the FIEO export conclave, DGFT announced a new anti-dumping duty on Indian steel exports"
+    )
+    assert exp.direct_effect == "true"
+
+
 def test_dgft_export_policy_amendment_is_a_market_access_change():
     exp = _analyze("DGFT Notification 34/2026-27: Amendment in the Export Policy of Wheat Flour and related products - reg.")
     assert exp.direct_effect == "true"

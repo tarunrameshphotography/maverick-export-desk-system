@@ -15,6 +15,7 @@ from radar.pipeline.entities import extract_entities, persist_entities
 from radar.pipeline.exposure import analyze_indian_exposure
 from radar.pipeline.saturation import compute_saturation
 from radar.pipeline.scoring import score_signal
+from radar.pipeline.verify import build_claims_table
 
 
 def _signal_text_and_sources(conn: sqlite3.Connection, signal_id: str) -> tuple[str, bool, int]:
@@ -72,6 +73,12 @@ def process_signal(conn: sqlite3.Connection, signal_id: str, now_iso: str, refer
          dates.get("effective_date"), dates.get("deadline"), dates.get("announcement_date"), signal_id),
     )
     conn.commit()
+
+    # Mechanical claim-candidate extraction (cheap, regex-based) runs before
+    # scoring so evidence_quality can see whether anything concrete was
+    # actually pulled from the source, not just where the source came from.
+    # Idempotent — a later NEEDS_RESEARCH pass calling this again is a no-op.
+    build_claims_table(conn, signal_id)
 
     breakdown = score_signal(
         conn, signal_id, text, exposure, has_primary, secondary_count,

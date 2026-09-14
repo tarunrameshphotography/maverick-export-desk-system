@@ -144,11 +144,49 @@ def test_score_criteria_rewards_direct_effect_and_actionability():
         destination_markets=["United States"],
     )
     weak = IndianExposure(direct_effect="uncertain", actionable_this_week="uncertain")
-    strong_scores = score_criteria(strong, True, 0, 5, True, True, 5)
-    weak_scores = score_criteria(weak, False, 0, 1, False, False, 5)
+    strong_scores = score_criteria(strong, True, 0, 5, True, True, 5, claim_count=2)
+    weak_scores = score_criteria(weak, False, 0, 1, False, False, 5, claim_count=0)
     assert strong_scores["exporter_impact"] > weak_scores["exporter_impact"]
     assert strong_scores["actionability"] > weak_scores["actionability"]
     assert strong_scores["indian_exposure"] > weak_scores["indian_exposure"]
+
+
+def test_evidence_quality_capped_when_no_claims_extracted():
+    # A primary-sourced headline with zero extracted claims (e.g. "no claims
+    # extracted" press releases) must not score full evidence quality just
+    # because the source itself is primary.
+    exposure = IndianExposure(direct_effect="true")
+    with_claims = score_criteria(exposure, True, 0, 3, False, False, 3, claim_count=2)
+    no_claims = score_criteria(exposure, True, 0, 3, False, False, 3, claim_count=0)
+    assert no_claims["evidence_quality"] < with_claims["evidence_quality"]
+    assert no_claims["evidence_quality"] <= 1.0
+
+
+def test_evidence_quality_unaffected_when_claims_present():
+    exposure = IndianExposure(direct_effect="true")
+    scores = score_criteria(exposure, True, 0, 3, False, False, 3, claim_count=3)
+    assert scores["evidence_quality"] == 5.0
+
+
+def test_routine_administrative_review_is_penalized(conn):
+    _insert_signal(conn, "SIG-TEST-0018")
+    total, applied = compute_penalties(
+        conn, "SIG-TEST-0018",
+        "Glycine From India: Preliminary Results of Antidumping Duty Administrative Review",
+        False,
+    )
+    assert "routine_procedural_review" in applied
+    assert total > 0
+
+
+def test_initiation_notice_is_not_penalized_as_routine(conn):
+    _insert_signal(conn, "SIG-TEST-0019")
+    total, applied = compute_penalties(
+        conn, "SIG-TEST-0019",
+        "Certain Widgets From India: Initiation of Countervailing Duty Investigation",
+        False,
+    )
+    assert "routine_procedural_review" not in applied
 
 
 def test_compute_base_score_matches_weighted_sum_when_all_criteria_maxed():

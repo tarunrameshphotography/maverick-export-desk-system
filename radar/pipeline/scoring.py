@@ -15,6 +15,12 @@ from radar.pipeline.exposure import IndianExposure
 NUMERIC_CLAIM_PATTERN = re.compile(r"\d+(\.\d+)?\s*%|₹\s*\d|\$\s*\d|\bcrore\b|\bmillion\b|\bbillion\b", re.I)
 GEOPOLITICAL_PATTERN = re.compile(r"\b(sanction|war|conflict|geopolit|military|strait|blockade|invasion)\b", re.I)
 SPECULATIVE_PATTERN = re.compile(r"\b(could|might|may (?:lead|result)|is expected to|likely to|is rumou?red)\b", re.I)
+# Routine, recurring procedural filings (not a new determination or initiation)
+# consistently outrank genuine primary-source news in the live run — they are
+# real and evidenced, but low actionability/time-sensitivity for a content team.
+ROUTINE_PROCEDURAL_PATTERN = re.compile(
+    r"\b(administrative review|sunset review|five-year review|changed circumstances review)\b", re.I
+)
 
 
 @dataclass
@@ -110,6 +116,7 @@ def score_criteria(
     angle_selected: bool,
     angle_exists: bool,
     entity_count: int,
+    claim_count: int = 1,
 ) -> dict[str, float]:
     """Returns {criterion_id: score_0_to_5} for every criterion in config."""
     impact_hits = sum(
@@ -140,6 +147,11 @@ def score_criteria(
     audience_fit = 5 if core_segment else (3 if exposure.direct_effect == "true" else 1)
 
     evidence_quality = 5 if has_primary_source else (3 if secondary_source_count >= 2 else 1)
+    # A source can technically be primary/multi-corroborated while nothing
+    # concrete was actually extracted from it (a bare headline) — that isn't
+    # strong evidence of anything yet, regardless of where it came from.
+    if claim_count == 0:
+        evidence_quality = min(evidence_quality, 1)
 
     return {
         "exporter_impact": float(exporter_impact),
@@ -180,6 +192,10 @@ def compute_penalties(conn: sqlite3.Connection, signal_id: str, text: str, has_f
         total += cfg["near_repeat"]
         applied.append("near_repeat")
 
+    if ROUTINE_PROCEDURAL_PATTERN.search(text):
+        total += cfg["routine_procedural_review"]
+        applied.append("routine_procedural_review")
+
     return round(total, 2), applied
 
 
@@ -213,9 +229,13 @@ def score_signal(
     angle_exists = (angle_row["n"] or 0) > 0
     angle_selected = (angle_row["selected"] or 0) > 0
 
+    claim_count = conn.execute(
+        "SELECT COUNT(*) AS n FROM claims WHERE signal_id = ?", (signal_id,)
+    ).fetchone()["n"]
+
     criteria_scores = score_criteria(
         exposure, has_primary_source, secondary_source_count, saturation_score_0to5,
-        angle_selected, angle_exists, entity_count,
+        angle_selected, angle_exists, entity_count, claim_count=claim_count,
     )
     base_score = compute_base_score(criteria_scores)
 

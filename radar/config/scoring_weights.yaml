@@ -50,6 +50,7 @@ penalties:
   speculation_max: 15
   near_repeat: 10
   near_repeat_window_days: 90   # "similarity search against the last 90 days of posts"
+  routine_procedural_review: 8  # administrative/sunset reviews: real but low actionability/time-sensitivity
 
 saturation_bands:
   # count of matching Indian news items / LinkedIn posts in the last 72h -> score 0-5

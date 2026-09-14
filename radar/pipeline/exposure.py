@@ -48,6 +48,14 @@ THREAT_KEYWORDS = re.compile(
     r"\b(ban|restrict|refus(?:al|ed)|reject(?:ion|ed)?|countervailing|anti-?dumping|penalt(?:y|ies)|"
     r"tariff (?:hike|increase))\b", re.I
 )
+# Event/conference announcements ("X Conclave", "campus hosts summit") often
+# trip TRADE_RELEVANCE purely through an institution's name (e.g. "Indian
+# Institute of Foreign Trade") with no actual trade-policy content. Such a
+# hit only counts when the text also carries a substantive keyword below.
+EVENT_NOISE_KEYWORDS = re.compile(
+    r"\b(conclave|convocation|felicitat\w*|alumni meet|leadership summit|networking (?:event|session)|"
+    r"campus (?:hosts|event))\b", re.I
+)
 COMPETITOR_POLICY_KEYWORDS = re.compile(
     r"\b(competitor|rival exporter|preferential tariff|graduation|gsp)\b", re.I
 )
@@ -114,11 +122,24 @@ def analyze_indian_exposure(
     products = sorted({e["normalized_value"] for e in entities if e["entity_type"] == "product"})
     destination_markets = sorted(countries - {"India"})
 
+    has_duty = bool(LANDED_COST_KEYWORDS.search(text))
+    has_incentive_price = bool(INCENTIVE_PRICE_KEYWORDS.search(text))
+    has_landed = has_duty or has_incentive_price
+    has_cash_cycle = bool(CASH_CYCLE_KEYWORDS.search(text))
+    has_market_access = bool(MARKET_ACCESS_KEYWORDS.search(text))
+    has_compliance = bool(COMPLIANCE_COST_KEYWORDS.search(text))
+    has_opportunity = bool(OPPORTUNITY_KEYWORDS.search(text))
+    has_threat = bool(THREAT_KEYWORDS.search(text))
+    has_substantive_trade_content = (
+        has_landed or has_cash_cycle or has_market_access or has_compliance or has_opportunity or has_threat
+    )
+
     india_authority_hit = bool(authorities & INDIA_DIRECT_AUTHORITIES)
     india_scheme_hit = bool(schemes & INDIA_SPECIFIC_SCHEMES)
     india_mentioned = "India" in countries
-    trade_relevant = india_scheme_hit or bool(authorities & INHERENTLY_TRADE_AUTHORITIES) or bool(
-        TRADE_RELEVANCE.search(text)
+    is_event_noise = bool(EVENT_NOISE_KEYWORDS.search(text)) and not has_substantive_trade_content
+    trade_relevant = india_scheme_hit or bool(authorities & INHERENTLY_TRADE_AUTHORITIES) or (
+        bool(TRADE_RELEVANCE.search(text)) and not is_event_noise
     )
 
     if (india_authority_hit or india_scheme_hit or india_mentioned) and not trade_relevant:
@@ -138,16 +159,8 @@ def analyze_indian_exposure(
         direct_effect = "uncertain"
         notes.append("No country or product entity extracted; cannot assess exposure without more evidence.")
 
-    has_duty = bool(LANDED_COST_KEYWORDS.search(text))
-    has_incentive_price = bool(INCENTIVE_PRICE_KEYWORDS.search(text))
-    has_landed = has_duty or has_incentive_price
     if has_incentive_price and not has_duty:
         notes.append("Export incentive rates change the exporter's net realised price (treated as a price effect).")
-    has_cash_cycle = bool(CASH_CYCLE_KEYWORDS.search(text))
-    has_market_access = bool(MARKET_ACCESS_KEYWORDS.search(text))
-    has_compliance = bool(COMPLIANCE_COST_KEYWORDS.search(text))
-    has_opportunity = bool(OPPORTUNITY_KEYWORDS.search(text))
-    has_threat = bool(THREAT_KEYWORDS.search(text))
     has_competitor_signal = bool(COMPETITOR_POLICY_KEYWORDS.search(text)) and len(countries) >= 2
 
     any_regulatory_evidence = has_landed or has_market_access or has_compliance or has_cash_cycle
