@@ -197,6 +197,12 @@ def cmd_draft(a):
     print(drafts.render_draft_brief(conn, did))
 
 
+def cmd_content_bundle(a):
+    conn = _conn()
+    draft_ids = drafts.create_content_bundle(conn, a.signal_id, now_iso())
+    print(drafts.render_bundle_brief(conn, draft_ids))
+
+
 def cmd_draft_edit(a):
     changes = {k: _read_text_arg(v) for k, v in
                (("headline", a.headline), ("body", a.body), ("exposure_line", a.exposure_line),
@@ -352,6 +358,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp = add("draft", cmd_draft, "create a LinkedIn/Instagram draft scaffold + writing brief")
     sp.add_argument("signal_id")
     sp.add_argument("--channel", choices=["linkedin", "instagram"], default="linkedin")
+    sp = add("content-bundle", cmd_content_bundle,
+             "create the full Phase 2 content bundle (3 LinkedIn + 2 Reels + caption + carousel + visual direction)")
+    sp.add_argument("signal_id")
     sp = add("draft-edit", cmd_draft_edit, "save a new draft version (text or @file)")
     sp.add_argument("draft_id", type=int)
     for f in ("--headline", "--body", "--exposure-line", "--visual-brief", "--first-comment"):

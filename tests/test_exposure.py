@@ -130,3 +130,12 @@ def test_round_trip_json_serialization():
     exp = _analyze("DGFT notified RoDTEP rate extension for India")
     restored = IndianExposure.from_json(exp.to_json())
     assert restored == exp
+
+
+def test_chapter_level_inferred_hs_code_is_flagged_not_stated():
+    # "Turmeric" carries an inferred chapter-level HS lead (Erode's hs_chapters)
+    # from the cluster map, not a code stated in the text — the notes must say
+    # so plainly rather than let it read like a verified tariff line.
+    exp = _analyze("India's turmeric exporters face new EU residue limits")
+    assert any(len(c) == 2 for c in exp.hs_codes)
+    assert any("inferred from the product name" in n for n in exp.notes)

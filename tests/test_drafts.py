@@ -2,10 +2,13 @@ import pytest
 
 from radar import settings
 from radar.content.drafts import (
+    ASSET_SLOTS,
+    create_content_bundle,
     create_draft_scaffold,
     disclosure_required,
     lint_draft,
     record_publication,
+    render_bundle_brief,
     render_draft_brief,
     risk_tier,
     save_draft_version,
@@ -196,3 +199,113 @@ def test_draft_brief_contains_rules(conn):
     brief = render_draft_brief(conn, create_draft_scaffold(conn, sid, "linkedin", NOW))
     assert "Pre-mortem" in brief
     assert DISCLOSURE in brief
+
+
+def test_content_bundle_creates_all_eight_assets_each_sourced(conn):
+    sid = _seed(conn)
+    draft_ids = create_content_bundle(conn, sid, NOW)
+    assert set(draft_ids) == set(ASSET_SLOTS)
+    assert len(set(draft_ids.values())) == 8  # eight distinct draft rows
+
+    for slot, draft_id in draft_ids.items():
+        row = conn.execute("SELECT * FROM content_drafts WHERE id = ?", (draft_id,)).fetchone()
+        assert row["signal_id"] == sid
+        assert row["asset_slot"] == slot
+        assert row["channel"] in ("linkedin", "instagram")
+        assert row["source_reference"] == "https://dgft.gov.in/n74"  # references the source signal
+        assert row["status"] == "draft"
+
+
+def test_content_bundle_linkedin_variants_carry_distinct_emphasis(conn):
+    sid = _seed(conn)
+    draft_ids = create_content_bundle(conn, sid, NOW)
+    bodies = [
+        conn.execute("SELECT body FROM content_drafts WHERE id = ?", (draft_ids[slot],)).fetchone()["body"]
+        for slot in ("linkedin_post_1", "linkedin_post_2", "linkedin_post_3")
+    ]
+    assert len(set(bodies)) == 3  # three genuinely different scaffolds, not copies
+    assert "Consequence first" in bodies[0]
+    assert "Fine print" in bodies[1]
+    assert "Action window" in bodies[2]
+
+
+def test_content_bundle_requires_a_selected_angle(conn):
+    sid = _seed(conn, select=False)
+    with pytest.raises(ValueError, match="no selected angle"):
+        create_content_bundle(conn, sid, NOW)
+
+
+def test_content_bundle_applies_disclosure_and_risk_tier_per_asset(conn):
+    sid = _seed(conn)  # incentives category + RoDTEP -> disclosure required, red tier
+    draft_ids = create_content_bundle(conn, sid, NOW)
+    for slot, draft_id in draft_ids.items():
+        row = conn.execute("SELECT * FROM content_drafts WHERE id = ?", (draft_id,)).fetchone()
+        assert row["disclosure_required"] == 1
+        assert row["risk_tier"] == "red"
+        if slot != "visual_direction":  # internal brief, not public-facing copy
+            assert DISCLOSURE in row["body"]
+
+
+def test_content_bundle_versions_are_tracked_per_asset_slot(conn):
+    sid = _seed(conn)
+    first = create_content_bundle(conn, sid, NOW)
+    second = create_content_bundle(conn, sid, NOW)  # e.g. re-run after a new angle is selected
+    for slot in ASSET_SLOTS:
+        v1 = conn.execute("SELECT version FROM content_drafts WHERE id = ?", (first[slot],)).fetchone()["version"]
+        v2 = conn.execute("SELECT version FROM content_drafts WHERE id = ?", (second[slot],)).fetchone()["version"]
+        assert (v1, v2) == (1, 2)
+
+
+def test_bundle_brief_lists_every_slot(conn):
+    sid = _seed(conn)
+    draft_ids = create_content_bundle(conn, sid, NOW)
+    brief = render_bundle_brief(conn, draft_ids)
+    for slot in ASSET_SLOTS:
+        assert slot in brief
+
+
+def test_exposure_line_never_joins_a_stated_hs_code_with_an_unrelated_inferred_one(conn):
+    # A signal whose entity-extraction text merges several clustered raw
+    # items (orchestrator.py) can carry a real, stated HS code alongside a
+    # low-confidence chapter inferred from an unrelated product keyword.
+    # Joining both into one "HS X, Y" string would read as one fabricated-
+    # looking list — the stated code must win outright.
+    sid = _seed(conn)
+    conn.execute(
+        "INSERT INTO signal_entities (signal_id, entity_type, raw_value, normalized_value, confidence) "
+        "VALUES (?, 'hs_code', 'HS 6109', '6109', 0.9)", (sid,),
+    )
+    conn.execute(
+        "INSERT INTO signal_entities (signal_id, entity_type, raw_value, normalized_value, confidence) "
+        "VALUES (?, 'hs_code', \"inferred from product keyword 'engineering goods' (cluster map)\", '73', 0.4)", (sid,),
+    )
+    conn.commit()
+    draft_id = create_draft_scaffold(conn, sid, "linkedin", NOW)
+    exposure_line = conn.execute("SELECT exposure_line FROM content_drafts WHERE id = ?", (draft_id,)).fetchone()["exposure_line"]
+    assert "6109" in exposure_line
+    assert "73" not in exposure_line
+
+
+def test_exposure_line_flags_an_inferred_only_hs_code_as_unverified(conn):
+    sid = _seed(conn)
+    conn.execute(
+        "INSERT INTO signal_entities (signal_id, entity_type, raw_value, normalized_value, confidence) "
+        "VALUES (?, 'hs_code', \"inferred from product keyword 'turmeric' (cluster map)\", '0910', 0.4)", (sid,),
+    )
+    conn.commit()
+    draft_id = create_draft_scaffold(conn, sid, "linkedin", NOW)
+    exposure_line = conn.execute("SELECT exposure_line FROM content_drafts WHERE id = ?", (draft_id,)).fetchone()["exposure_line"]
+    assert "0910" in exposure_line
+    assert "inferred" in exposure_line
+    assert "not stated" in exposure_line
+
+
+def test_legacy_single_draft_scaffold_still_works_after_asset_slot_migration(conn):
+    sid = _seed(conn)
+    draft_id = create_draft_scaffold(conn, sid, "linkedin", NOW)
+    row = conn.execute("SELECT * FROM content_drafts WHERE id = ?", (draft_id,)).fetchone()
+    assert row["asset_slot"] == "linkedin"
+    # A second single-channel draft still versions independently of the channel-wide bundle slots.
+    draft_id_2 = create_draft_scaffold(conn, sid, "linkedin", NOW)
+    row2 = conn.execute("SELECT * FROM content_drafts WHERE id = ?", (draft_id_2,)).fetchone()
+    assert row2["version"] == 2

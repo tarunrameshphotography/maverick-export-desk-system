@@ -54,7 +54,28 @@ def _selected_analysis(conn: sqlite3.Connection, signal_id: str):
 
 
 def _exposure_line_template(conn: sqlite3.Connection, signal_id: str) -> str:
-    hs = ", ".join(_signal_entities(conn, signal_id, "hs_code")) or "[VERIFY: HS code]"
+    # Prefer HS codes actually stated in the source text (confidence >= 0.9)
+    # over chapter-level leads inferred from a product-keyword/cluster match
+    # (confidence 0.4, entities.py). Never join the two: a signal whose text
+    # merges several clustered raw items can carry an inferred chapter from
+    # an unrelated cluster, and joining it alongside a real code would read
+    # as one fabricated-looking HS list.
+    stated = conn.execute(
+        "SELECT DISTINCT normalized_value FROM signal_entities WHERE signal_id = ? AND entity_type = 'hs_code' "
+        "AND confidence >= 0.9",
+        (signal_id,),
+    ).fetchall()
+    if stated:
+        hs = ", ".join(r["normalized_value"] for r in stated)
+    else:
+        inferred = conn.execute(
+            "SELECT DISTINCT normalized_value FROM signal_entities WHERE signal_id = ? AND entity_type = 'hs_code'",
+            (signal_id,),
+        ).fetchall()
+        hs = (
+            f"[VERIFY: HS code — chapter {inferred[0]['normalized_value']} inferred from product name, not stated]"
+            if inferred else "[VERIFY: HS code]"
+        )
     markets = [c for c in _signal_entities(conn, signal_id, "country") if c != "India"]
     market = ", ".join(markets) or "[VERIFY: market]"
     return (
@@ -63,11 +84,51 @@ def _exposure_line_template(conn: sqlite3.Connection, signal_id: str) -> str:
     )
 
 
-def _next_version(conn: sqlite3.Connection, signal_id: str, channel: str) -> int:
+def _next_version(conn: sqlite3.Connection, signal_id: str, asset_slot: str) -> int:
     row = conn.execute(
-        "SELECT MAX(version) AS v FROM content_drafts WHERE signal_id = ? AND channel = ?", (signal_id, channel)
+        "SELECT MAX(version) AS v FROM content_drafts WHERE signal_id = ? AND asset_slot = ?", (signal_id, asset_slot)
     ).fetchone()
     return (row["v"] or 0) + 1
+
+
+def _insert_draft_row(
+    conn: sqlite3.Connection,
+    *,
+    signal_id: str,
+    analysis_id: int,
+    channel: str,
+    asset_slot: str,
+    headline: str,
+    body: str,
+    fmt: str,
+    visual_brief: str,
+    exposure_line: str,
+    source_reference: str,
+    suggested_first_comment: str,
+    disclosure_required: bool,
+    disclosure_line: str | None,
+    tier: str,
+    status: str,
+    now_iso: str,
+    edited_by: str,
+    edit_reason_codes: list[str] | None = None,
+) -> int:
+    cur = conn.execute(
+        """
+        INSERT INTO content_drafts (signal_id, analysis_id, channel, asset_slot, version, headline, body, format,
+                                     visual_brief, exposure_line, source_reference, suggested_first_comment,
+                                     disclosure_required, disclosure_line, risk_tier, status, created_at, edited_by,
+                                     edit_reason_codes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            signal_id, analysis_id, channel, asset_slot, _next_version(conn, signal_id, asset_slot),
+            headline, body, fmt, visual_brief, exposure_line, source_reference, suggested_first_comment,
+            int(disclosure_required), disclosure_line, tier, status, now_iso, edited_by,
+            json.dumps(edit_reason_codes or []) if edit_reason_codes is not None else None,
+        ),
+    )
+    return cur.lastrowid
 
 
 def _linkedin_body(verified_claims, analysis, action_hint: str, disclosure: str | None) -> str:
@@ -104,6 +165,165 @@ def _instagram_body(signal, verified_claims, analysis, disclosure: str | None) -
     return "\n".join(parts)
 
 
+# Phase 2 Content Engine (STRATEGY/content_architecture.md, DELIVERABLES):
+# one signal produces a *bundle* of named, publish-ready assets instead of a
+# single draft per channel. Each slot still follows the hybrid model — a
+# structured scaffold with every claim traceable to a verified source, the
+# prose written by the analyst/Claude Code session and saved back as a new
+# version (save_draft_version). Nothing here writes final prose from thin
+# air, and nothing here can publish.
+LINKEDIN_VARIANT_EMPHASIS = {
+    1: ("Consequence first", "Lead with the direct exporter consequence — who is affected and how, in the first line."),
+    2: ("Fine print", "Lead with what the notification's fine print says that the headline coverage misses or gets wrong."),
+    3: ("Action window", "Lead with the deadline or action window — what to do this week, and by when."),
+}
+INSTAGRAM_REEL_CONCEPT = {
+    1: "a practical explainer: what changed, who it affects, what to do — in that order",
+    2: "a headline-vs-reality contrast: state the headline claim, then what the notification actually says",
+}
+ASSET_SLOTS = [
+    "linkedin_post_1", "linkedin_post_2", "linkedin_post_3",
+    "instagram_reel_1", "instagram_reel_2", "instagram_caption",
+    "instagram_carousel", "visual_direction",
+]
+ASSET_SLOT_CHANNEL = {
+    "linkedin_post_1": "linkedin", "linkedin_post_2": "linkedin", "linkedin_post_3": "linkedin",
+    "instagram_reel_1": "instagram", "instagram_reel_2": "instagram", "instagram_caption": "instagram",
+    "instagram_carousel": "instagram", "visual_direction": "instagram",
+}
+
+
+def _linkedin_variant_body(variant: int, verified_claims, analysis, disclosure: str | None) -> str:
+    label, guidance = LINKEDIN_VARIANT_EMPHASIS[variant]
+    lines = [f"[VARIANT {variant} — {label}. {guidance}]",
+             "[HOOK — founder voice; name the document, HS line or date. No exclamation marks.]", ""]
+    for c in verified_claims:
+        lines.append(f"[FACT] {c['claim_text']}")
+    lines += ["", f"[INTERPRETATION] {analysis['angle_text']}", "",
+              "[ACTION — what should an exporter do this week?]"]
+    if disclosure:
+        lines += ["", disclosure]
+    return "\n".join(lines)
+
+
+def _instagram_reel_body(reel_number: int, verified_claims, analysis, disclosure: str | None) -> str:
+    ig = settings.content_rules()["instagram"]
+    lo, hi = ig["reel_seconds"]
+    concept = INSTAGRAM_REEL_CONCEPT[reel_number]
+    facts = "\n".join(f"  - {c['claim_text']}" for c in verified_claims) or "  - [VERIFY: no verified claims yet]"
+    parts = [
+        f"REEL {reel_number} CONCEPT ({lo}-{hi}s, founder on camera, captions burned in): "
+        f"[WRITE: {concept}, on '{analysis['angle_label']}']",
+        f"LANGUAGE: {ig['language']}",
+        "HOOK (first 3s): [WRITE: a concrete question an MSME owner would ask — no income claims]",
+        "SCRIPT (Tamil VO notes):",
+        "  1. What changed — [WRITE]",
+        "  2. Who it affects — [WRITE]",
+        "  3. What to do — [WRITE]",
+        "ON-SCREEN TEXT (English): [WRITE]",
+        f"FACTS AVAILABLE (verified only):\n{facts}",
+        "Never: " + "; ".join(ig["never"]) + ".",
+    ]
+    if disclosure:
+        parts.append(disclosure)
+    return "\n".join(parts)
+
+
+def _instagram_caption_body(analysis, primary_ref: str, disclosure: str | None) -> str:
+    parts = [
+        f"CAPTION for '{analysis['angle_label']}': [WRITE: 2-3 lines, source named, LEAP mention only if genuinely relevant]",
+        f"Source to name: {primary_ref}",
+    ]
+    if disclosure:
+        parts.append(disclosure)
+    return "\n".join(parts)
+
+
+def _instagram_carousel_body(verified_claims, analysis, disclosure: str | None) -> str:
+    ig = settings.content_rules()["instagram"]
+    s_lo, s_hi = ig["carousel_slides"]
+    facts = "\n".join(f"  - {c['claim_text']}" for c in verified_claims) or "  - [VERIFY: no verified claims yet]"
+    parts = [
+        f"CAROUSEL CONCEPT ({s_lo}-{s_hi} slides, built to be saved) for '{analysis['angle_label']}': "
+        "[WRITE: slide-by-slide outline]",
+        f"FACTS AVAILABLE (verified only):\n{facts}",
+        "Do not copy the LinkedIn post — restructure for a saved, swipeable read.",
+    ]
+    if disclosure:
+        parts.append(disclosure)
+    return "\n".join(parts)
+
+
+def _visual_direction_body(analysis, fmt: str) -> str:
+    return "\n".join([
+        f"VISUAL DIRECTION for '{analysis['angle_label']}' (franchise: {analysis['franchise'] or 'unassigned'}, "
+        f"format: {fmt}):",
+        "[WRITE: what every visual across this bundle shows — no more precision than the underlying data has.]",
+        "- LinkedIn posts: [WRITE: image/document treatment, if any]",
+        "- Reels: [WRITE: on-screen graphics, captions style, b-roll if any]",
+        "- Carousel: [WRITE: slide layout, chart type if a number is being shown]",
+        "Consistency check: the same number or claim shown visually must match the verified claim it illustrates.",
+    ])
+
+
+def create_content_bundle(conn: sqlite3.Connection, signal_id: str, now_iso: str) -> dict[str, int]:
+    """Creates the full Phase 2 asset bundle for a signal in one call: three
+    LinkedIn post variants, two Reel concepts, a standalone caption, a
+    carousel concept, and a visual-direction brief — each a scaffold the
+    analyst/Claude Code session fills in, each already carrying its source
+    reference back to the signal it was produced from."""
+    signal = conn.execute("SELECT * FROM signals WHERE id = ?", (signal_id,)).fetchone()
+    if signal is None:
+        raise ValueError(f"No such signal: {signal_id}")
+    analysis = _selected_analysis(conn, signal_id)
+    if analysis is None:
+        raise ValueError(
+            f"{signal_id} has no selected angle. A human picks the lead and the angle before drafting (Section 17)."
+        )
+
+    verified = conn.execute(
+        "SELECT * FROM claims WHERE signal_id = ? AND status = 'verified' ORDER BY id", (signal_id,)
+    ).fetchall()
+    needs_disclosure = disclosure_required(conn, signal_id)
+    disclosure = settings.content_rules()["disclosure_line"] if needs_disclosure else None
+    primary_ref = signal["primary_doc_ref"] or signal["primary_source_url"] or "[VERIFY: primary source]"
+    fmt = settings.content_rules()["franchise_format"].get(analysis["franchise"], "Text")
+    exposure_line = _exposure_line_template(conn, signal_id)
+    tier = risk_tier(conn, signal_id)
+
+    bodies: dict[str, str] = {
+        "linkedin_post_1": _linkedin_variant_body(1, verified, analysis, disclosure),
+        "linkedin_post_2": _linkedin_variant_body(2, verified, analysis, disclosure),
+        "linkedin_post_3": _linkedin_variant_body(3, verified, analysis, disclosure),
+        "instagram_reel_1": _instagram_reel_body(1, verified, analysis, disclosure),
+        "instagram_reel_2": _instagram_reel_body(2, verified, analysis, disclosure),
+        "instagram_caption": _instagram_caption_body(analysis, primary_ref, disclosure),
+        "instagram_carousel": _instagram_carousel_body(verified, analysis, disclosure),
+        "visual_direction": _visual_direction_body(analysis, fmt),
+    }
+
+    draft_ids: dict[str, int] = {}
+    for slot in ASSET_SLOTS:
+        draft_ids[slot] = _insert_draft_row(
+            conn, signal_id=signal_id, analysis_id=analysis["id"], channel=ASSET_SLOT_CHANNEL[slot],
+            asset_slot=slot, headline=f"{analysis['angle_label']} — {slot}", body=bodies[slot], fmt=fmt,
+            visual_brief=f"{fmt} — [WRITE: what the visual shows; no more precision than the data has]",
+            exposure_line=exposure_line, source_reference=primary_ref,
+            suggested_first_comment=f"Source: {primary_ref}", disclosure_required=needs_disclosure,
+            disclosure_line=disclosure, tier=tier, status="draft", now_iso=now_iso, edited_by="system_scaffold",
+        )
+    conn.commit()
+    return draft_ids
+
+
+def render_bundle_brief(conn: sqlite3.Connection, draft_ids: dict[str, int]) -> str:
+    lines = [f"# Content bundle — {len(draft_ids)} assets", ""]
+    for slot in ASSET_SLOTS:
+        if slot in draft_ids:
+            lines.append(f"- {slot}: draft #{draft_ids[slot]}")
+    return "\n".join(lines)
+
+
 def create_draft_scaffold(conn: sqlite3.Connection, signal_id: str, channel: str, now_iso: str) -> int:
     if channel not in ("linkedin", "instagram"):
         raise ValueError(f"Unknown channel: {channel}")
@@ -129,23 +349,17 @@ def create_draft_scaffold(conn: sqlite3.Connection, signal_id: str, channel: str
         body = _instagram_body(signal, verified, analysis, disclosure)
 
     fmt = settings.content_rules()["franchise_format"].get(analysis["franchise"], "Text")
-    cur = conn.execute(
-        """
-        INSERT INTO content_drafts (signal_id, analysis_id, channel, version, headline, body, format,
-                                     visual_brief, exposure_line, source_reference, suggested_first_comment,
-                                     disclosure_required, disclosure_line, risk_tier, status, created_at, edited_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, 'system_scaffold')
-        """,
-        (
-            signal_id, analysis["id"], channel, _next_version(conn, signal_id, channel),
-            analysis["angle_label"], body, fmt,
-            f"{fmt} — [WRITE: what the visual shows; no more precision than the data has]",
-            _exposure_line_template(conn, signal_id), primary_ref,
-            f"Source: {primary_ref}", int(needs_disclosure), disclosure, risk_tier(conn, signal_id), now_iso,
-        ),
+    draft_id = _insert_draft_row(
+        conn, signal_id=signal_id, analysis_id=analysis["id"], channel=channel, asset_slot=channel,
+        headline=analysis["angle_label"], body=body, fmt=fmt,
+        visual_brief=f"{fmt} — [WRITE: what the visual shows; no more precision than the data has]",
+        exposure_line=_exposure_line_template(conn, signal_id), source_reference=primary_ref,
+        suggested_first_comment=f"Source: {primary_ref}", disclosure_required=needs_disclosure,
+        disclosure_line=disclosure, tier=risk_tier(conn, signal_id), status="draft", now_iso=now_iso,
+        edited_by="system_scaffold",
     )
     conn.commit()
-    return cur.lastrowid
+    return draft_id
 
 
 def save_draft_version(
@@ -164,23 +378,17 @@ def save_draft_version(
         raise ValueError(f"Cannot edit fields: {sorted(unknown)}")
     old = dict(conn.execute("SELECT * FROM content_drafts WHERE id = ?", (draft_id,)).fetchone())
     new = {**old, **changes}
-    cur = conn.execute(
-        """
-        INSERT INTO content_drafts (signal_id, analysis_id, channel, version, headline, body, format,
-                                     visual_brief, exposure_line, source_reference, suggested_first_comment,
-                                     disclosure_required, disclosure_line, risk_tier, status, created_at,
-                                     edited_by, edit_reason_codes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'edited', ?, ?, ?)
-        """,
-        (
-            new["signal_id"], new["analysis_id"], new["channel"], _next_version(conn, new["signal_id"], new["channel"]),
-            new["headline"], new["body"], new["format"], new["visual_brief"], new["exposure_line"],
-            new["source_reference"], new["suggested_first_comment"], new["disclosure_required"],
-            new["disclosure_line"], new["risk_tier"], now_iso, edited_by, json.dumps(edit_reason_codes or []),
-        ),
+    draft_id = _insert_draft_row(
+        conn, signal_id=new["signal_id"], analysis_id=new["analysis_id"], channel=new["channel"],
+        asset_slot=new["asset_slot"], headline=new["headline"], body=new["body"], fmt=new["format"],
+        visual_brief=new["visual_brief"], exposure_line=new["exposure_line"],
+        source_reference=new["source_reference"], suggested_first_comment=new["suggested_first_comment"],
+        disclosure_required=bool(new["disclosure_required"]), disclosure_line=new["disclosure_line"],
+        tier=new["risk_tier"], status="edited", now_iso=now_iso, edited_by=edited_by,
+        edit_reason_codes=edit_reason_codes or [],
     )
     conn.commit()
-    return cur.lastrowid
+    return draft_id
 
 
 def lint_draft(conn: sqlite3.Connection, draft_id: int) -> list[str]:

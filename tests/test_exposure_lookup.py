@@ -19,8 +19,37 @@ def test_without_api_key_falls_back_to_manual_lookup_link(monkeypatch):
 
 def test_unmapped_destination_falls_back_even_with_a_key(monkeypatch):
     monkeypatch.setattr(settings, "COMTRADE_API_KEY", "fake-key")
-    line = exposure_lookup.exposure_line(["6109"], ["Vietnam"])  # not in COUNTRY_M49
+    line = exposure_lookup.exposure_line(["6109"], ["Bhutan"])  # not in COUNTRY_M49
     assert exposure_lookup.COMTRADE_SEARCH_URL in line
+
+
+def test_falls_through_to_a_later_destination_that_is_mapped(monkeypatch):
+    # The first extracted destination has no M49 entry; a later one does and
+    # should still be tried automatically rather than giving up early.
+    class _FakeResponse:
+        def raise_for_status(self):
+            pass
+
+        def json(self):
+            return {"data": [{"primaryValue": 1234.0, "period": "2026"}]}
+
+    def _fake_get(url, params=None, headers=None, timeout=None):
+        assert params["partnerCode"] == exposure_lookup.COUNTRY_M49["Vietnam"]
+        return _FakeResponse()
+
+    monkeypatch.setattr(settings, "COMTRADE_API_KEY", "fake-key")
+    monkeypatch.setattr(exposure_lookup.requests, "get", _fake_get)
+    line = exposure_lookup.exposure_line(["6109"], ["Bhutan", "Vietnam"])
+    assert "Vietnam" in line
+    assert "$1,234" in line
+
+
+def test_newly_covered_destination_takes_the_manual_link_without_a_key(monkeypatch):
+    monkeypatch.setattr(settings, "COMTRADE_API_KEY", None)
+    line = exposure_lookup.exposure_line(["6109"], ["Vietnam"])
+    assert "Vietnam" in line
+    assert exposure_lookup.COMTRADE_SEARCH_URL in line
+    assert "$" not in line
 
 
 def test_no_destination_market_still_gives_a_usable_manual_link(monkeypatch):

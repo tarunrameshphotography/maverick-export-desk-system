@@ -69,6 +69,32 @@ def test_extract_hs_and_clusters_matches_product_keyword_without_hs_code():
     assert "erode" in values
 
 
+def test_extract_hs_and_clusters_infers_chapter_level_hs_from_product_keyword():
+    # No HS code or chapter is stated anywhere in this text — only the product
+    # name ("turmeric") is. The cluster map (Erode -> hs_chapters ["0910",
+    # "52", "63"]) should still surface a chapter-level lead, clearly marked
+    # as inferred (low confidence) rather than stated in the source.
+    entities = extract_hs_and_clusters("Turmeric exporters face new residue limits")
+    inferred = [e for e in entities if e["entity_type"] == "hs_code"]
+    assert {e["normalized_value"] for e in inferred} == {"0910", "52", "63"}
+    for e in inferred:
+        assert e["confidence"] == 0.4
+        assert "inferred" in e["raw_value"]
+
+
+def test_extract_hs_and_clusters_does_not_duplicate_stated_hs_chapter():
+    # HS 6109 (chapter 61) is stated explicitly, and the text also names the
+    # matching product keyword ("knitted apparel"). Tirupur's own chapter
+    # list is also ["61"], so no separate inferred entity should be added on
+    # top of the one already extracted straight from the text.
+    entities = extract_hs_and_clusters("New rule on HS 6109 affects knitted apparel exporters")
+    inferred = [
+        e for e in entities
+        if e["entity_type"] == "hs_code" and "inferred" in e["raw_value"]
+    ]
+    assert inferred == []
+
+
 def test_extract_dates_effective_from():
     entities = extract_dates("The regulation is effective from 1 October 2026 nationwide")
     matches = [e for e in entities if e["entity_type"] == "effective_date"]

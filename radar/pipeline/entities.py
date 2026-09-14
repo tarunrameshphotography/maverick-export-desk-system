@@ -202,10 +202,18 @@ def extract_schemes_and_authorities(text: str) -> list[dict]:
     return results
 
 
+def _cluster_hs_chapters(cluster_id: str) -> list[str]:
+    for cluster in settings.clusters():
+        if cluster["id"] == cluster_id:
+            return cluster.get("hs_chapters", [])
+    return []
+
+
 def extract_hs_and_clusters(text: str) -> list[dict]:
     results = []
     chapter_map = _cluster_hs_chapter_map()
     seen_hs: set[str] = set()
+    seen_hs_chapters: set[str] = set()
     seen_clusters: set[str] = set()
 
     for match in HS_CODE_PATTERN.finditer(text):
@@ -214,6 +222,7 @@ def extract_hs_and_clusters(text: str) -> list[dict]:
             seen_hs.add(code)
             results.append({"entity_type": "hs_code", "raw_value": match.group(0), "normalized_value": code, "confidence": 0.9})
         chapter = code[:2]
+        seen_hs_chapters.add(chapter)
         if chapter in chapter_map and chapter_map[chapter] not in seen_clusters:
             seen_clusters.add(chapter_map[chapter])
             results.append(
@@ -222,6 +231,7 @@ def extract_hs_and_clusters(text: str) -> list[dict]:
 
     for match in CHAPTER_PATTERN.finditer(text):
         chapter = match.group(1)
+        seen_hs_chapters.add(chapter)
         if chapter in chapter_map and chapter_map[chapter] not in seen_clusters:
             seen_clusters.add(chapter_map[chapter])
             results.append(
@@ -230,11 +240,28 @@ def extract_hs_and_clusters(text: str) -> list[dict]:
 
     lowered = text.lower()
     for keyword, cluster_id in _cluster_keyword_map().items():
-        if re.search(rf"\b{re.escape(keyword)}\b", lowered) and cluster_id not in seen_clusters:
+        if not re.search(rf"\b{re.escape(keyword)}\b", lowered):
+            continue
+        if cluster_id not in seen_clusters:
             seen_clusters.add(cluster_id)
             results.append(
                 {"entity_type": "cluster", "raw_value": keyword, "normalized_value": cluster_id, "confidence": 0.8}
             )
+        # The story never stated an HS code or chapter, but the product name
+        # matches a cluster whose tariff chapters are already known (Section
+        # 15's starter table). Surface that chapter as a low-confidence,
+        # clearly-flagged lead — never a substitute for the actual tariff
+        # line, which the exposure/drafting stages must still verify before
+        # quoting a duty rate or trade value.
+        for chapter in _cluster_hs_chapters(cluster_id):
+            digits_only = chapter[:2]
+            if digits_only in seen_hs_chapters:
+                continue
+            seen_hs_chapters.add(digits_only)
+            results.append({
+                "entity_type": "hs_code", "raw_value": f"inferred from product keyword '{keyword}' (cluster map)",
+                "normalized_value": chapter, "confidence": 0.4,
+            })
     return results
 
 

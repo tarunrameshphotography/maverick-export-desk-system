@@ -161,6 +161,13 @@ def analyze_indian_exposure(
 
     if has_incentive_price and not has_duty:
         notes.append("Export incentive rates change the exporter's net realised price (treated as a price effect).")
+    chapter_level_hs = [c for c in hs_codes if len(c) == 2]
+    if chapter_level_hs:
+        notes.append(
+            f"HS {', '.join(chapter_level_hs)} is a chapter-level lead inferred from the product name via the "
+            "cluster map, not stated in the source — verify the actual tariff line before quoting a duty rate "
+            "or trade value."
+        )
     has_competitor_signal = bool(COMPETITOR_POLICY_KEYWORDS.search(text)) and len(countries) >= 2
 
     any_regulatory_evidence = has_landed or has_market_access or has_compliance or has_cash_cycle

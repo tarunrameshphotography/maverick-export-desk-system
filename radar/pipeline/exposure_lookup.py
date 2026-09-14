@@ -27,7 +27,11 @@ INDIA_REPORTER_CODE = "699"  # UN M49 code for India, Comtrade's reporterCode
 
 # Comtrade partner codes for the destinations this Desk Sheet sees most often.
 # Deliberately small and hand-verified rather than a full ISO/M49 table —
-# anything not listed here just takes the manual-lookup path below.
+# anything not listed here just takes the manual-lookup path below. Values are
+# the UN Statistics Division's standard M49 numeric country codes (public
+# reference data — https://unstats.un.org/unsd/methodology/m49/), matched
+# against radar/pipeline/entities.py's COUNTRY_ALIASES canonical names so a
+# destination extracted from a story resolves here whenever it's covered.
 COUNTRY_M49 = {
     "United States": "842",
     "European Union": "97",
@@ -37,6 +41,39 @@ COUNTRY_M49 = {
     "Japan": "392",
     "Australia": "36",
     "Canada": "124",
+    "Saudi Arabia": "682",
+    "Singapore": "702",
+    "Germany": "276",
+    "France": "251",
+    "Netherlands": "528",
+    "Italy": "380",
+    "South Korea": "410",
+    "Vietnam": "704",
+    "Bangladesh": "50",
+    "Indonesia": "360",
+    "Turkey": "792",
+    "Brazil": "76",
+    "South Africa": "710",
+    "Thailand": "764",
+    "Malaysia": "458",
+    "Sri Lanka": "144",
+    "Pakistan": "586",
+    "Oman": "512",
+    "Qatar": "634",
+    "Kuwait": "414",
+    "Israel": "376",
+    "Nigeria": "566",
+    "Kenya": "404",
+    "Philippines": "608",
+    "New Zealand": "554",
+    "Switzerland": "756",
+    "Egypt": "818",
+    "Russia": "643",
+    "Mexico": "484",
+    "Argentina": "32",
+    "Chile": "152",
+    "Peru": "604",
+    "Norway": "579",
 }
 
 
@@ -80,11 +117,14 @@ def exposure_line(hs_codes: list[str], destination_markets: list[str]) -> str:
     hs_code = hs_codes[0]
     destination = destination_markets[0] if destination_markets else None
 
-    if destination:
-        result = _comtrade_lookup(hs_code, destination)
+    # Try every extracted destination, not just the first — a story naming
+    # both an M49-covered market and an uncovered one shouldn't fall back to
+    # the manual link when a later market would have resolved automatically.
+    for candidate in destination_markets:
+        result = _comtrade_lookup(hs_code, candidate)
         if result:
             return (
-                f"India exported ${result['value_usd']:,.0f} of HS {hs_code} to {destination} in "
+                f"India exported ${result['value_usd']:,.0f} of HS {hs_code} to {candidate} in "
                 f"{result['period']} (source: UN Comtrade, auto-retrieved)."
             )
 
