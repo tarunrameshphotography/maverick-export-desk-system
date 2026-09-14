@@ -35,11 +35,14 @@ def _split_sentences(text: str) -> list[str]:
 
 
 def extract_candidate_claims(text: str) -> list[str]:
+    from radar.pipeline.entities import DATE_LITERAL
+
     sentences = _split_sentences(text)
     seen: set[str] = set()
     candidates = []
     for sentence in sentences:
-        if CLAIM_WORTHY_PATTERN.search(sentence) and sentence not in seen:
+        worthy = CLAIM_WORTHY_PATTERN.search(sentence) or DATE_LITERAL.search(sentence)
+        if worthy and sentence not in seen:
             seen.add(sentence)
             candidates.append(sentence)
     return candidates
@@ -78,6 +81,22 @@ def build_claims_table(conn: sqlite3.Connection, signal_id: str) -> int:
     return inserted
 
 
+def _check_quote(conn: sqlite3.Connection, signal_id: str, source_url: str | None, quote: str) -> str:
+    """Raises if a stored copy of the source exists and the quote isn't in it.
+    Returns the provenance note to store with the claim."""
+    from radar.pipeline.evidence import quote_found
+
+    found = quote_found(conn, signal_id, source_url, quote) if source_url else None
+    if found is False:
+        raise ValueError(
+            f"Quote not found in the stored copy of {source_url}. Quote the document verbatim "
+            f"(`python -m radar fetch {signal_id}` shows the stored text path)."
+        )
+    if found is None:
+        return "Quote NOT machine-checked: no stored copy of this source (PDF, aggregator link, or not fetched)."
+    return "Quote machine-checked against the stored copy of the source."
+
+
 def add_claim(
     conn: sqlite3.Connection,
     signal_id: str,
@@ -99,15 +118,16 @@ def add_claim(
     if source_type not in ("primary", "secondary"):
         raise ValueError(f"Invalid source type: {source_type}")
     status = "verified" if source_quote else "pending"
+    note = _check_quote(conn, signal_id, source_url, source_quote) if source_quote else None
     cur = conn.execute(
         """
         INSERT INTO claims (signal_id, claim_text, claim_type, source_url, source_title, source_type,
-                             source_date, source_quote, status, verified_by, verified_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                             source_date, source_quote, status, verified_by, verified_at, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             signal_id, claim_text, claim_type, source_url, source_title, source_type, source_date,
-            source_quote, status, verified_by if source_quote else None, now_iso if source_quote else None,
+            source_quote, status, verified_by if source_quote else None, now_iso if source_quote else None, note,
         ),
     )
     conn.commit()
@@ -130,6 +150,12 @@ def mark_claim(
         raise ValueError(f"Invalid claim type: {claim_type}")
     if status == "verified" and not source_quote:
         raise ValueError("Cannot mark a claim verified without a source_quote (no claim without a quote).")
+    if status == "verified":
+        claim = conn.execute("SELECT signal_id, source_url FROM claims WHERE id = ?", (claim_id,)).fetchone()
+        if claim is None:
+            raise ValueError(f"No such claim: {claim_id}")
+        provenance = _check_quote(conn, claim["signal_id"], claim["source_url"], source_quote)
+        notes = f"{notes} | {provenance}" if notes else provenance
 
     fields = ["status = ?"]
     params: list = [status]
@@ -181,6 +207,18 @@ def render_verification_worksheet(conn: sqlite3.Connection, signal_id: str) -> s
         "record the exact quoted passage, and tag fact/interpretation/forecast/opinion.",
         "",
     ]
+    docs = conn.execute("SELECT * FROM evidence_docs WHERE signal_id = ? ORDER BY id", (signal_id,)).fetchall()
+    lines.append("## Stored primary documents")
+    if docs:
+        for d in docs:
+            if d["status"] == "stored":
+                lines.append(f"- STORED {d['chars']:,} chars · `{d['path']}` · {d['url']}")
+            else:
+                lines.append(f"- {d['status'].upper()}: {d['url']} — {d['note']}")
+    else:
+        lines.append(f"- _None yet — run `python -m radar fetch {signal_id}`._")
+    lines.append("")
+
     for claim in claims:
         lines += [
             f"## Claim #{claim['id']} — status: {claim['status']}",
@@ -188,8 +226,10 @@ def render_verification_worksheet(conn: sqlite3.Connection, signal_id: str) -> s
             f"- Source ({claim['source_type']}): {claim['source_url']}",
             f"- Source date: {claim['source_date'] or 'unknown'}",
             f"- Quoted passage: {claim['source_quote'] or '_(fill in)_'}",
-            "",
         ]
+        if claim["notes"]:
+            lines.append(f"- Provenance: {claim['notes']}")
+        lines.append("")
     if not claims:
         lines.append("_No candidate claims extracted — verify manually against the primary source._")
     return "\n".join(lines)

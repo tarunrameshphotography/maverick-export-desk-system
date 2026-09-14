@@ -16,7 +16,7 @@ from radar.content import drafts
 from radar.db.connection import get_connection, init_db, seed_sources
 from radar.desk import approvals, calls_ledger, performance
 from radar.desk.desk_sheet import write_desk_sheet
-from radar.pipeline import angles, verify
+from radar.pipeline import angles, evidence, verify
 from radar.pipeline.exposure import IndianExposure
 from radar.pipeline.orchestrator import rescore_signal
 from radar.runlog import now_iso
@@ -131,6 +131,19 @@ def _rescore_and_report(conn, signal_id):
 
 def cmd_rescore(a):
     _rescore_and_report(_conn(), a.signal_id)
+
+
+def cmd_fetch(a):
+    """Section 26: fetch and preserve the primary document itself."""
+    conn = _conn()
+    for doc in evidence.fetch_signal_evidence(conn, a.signal_id, now_iso()):
+        if doc["status"] == "stored":
+            print(f"STORED  {doc['chars']:,} chars -> {doc['path']}\n        {doc['url']}")
+            text = evidence.stored_text(conn, a.signal_id, doc["url"]) or ""
+            for line in evidence.excerpts(text, verify.CLAIM_WORTHY_PATTERN, limit=a.excerpts):
+                print(f"    · {line}")
+        else:
+            print(f"{doc['status'].upper():<8}{doc['url']}\n        {doc['note']}")
 
 
 def cmd_verify(a):
@@ -296,6 +309,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     sp = add("rescore", cmd_rescore, "re-score a signal after new evidence or angle work")
     sp.add_argument("signal_id")
+    sp = add("fetch", cmd_fetch, "fetch and store the signal's primary documents")
+    sp.add_argument("signal_id")
+    sp.add_argument("--excerpts", type=int, default=10, help="claim-worthy sentences to print per document")
     sp = add("verify", cmd_verify, "print the verification worksheet")
     sp.add_argument("signal_id")
     sp = add("claim-mark", cmd_claim_mark, "verify/fail a claim (verified requires --quote)")
