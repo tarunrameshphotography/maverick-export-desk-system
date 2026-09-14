@@ -1,0 +1,53 @@
+# Cluster reference map (Section 15 / export_intelligence_system.md "starter" table).
+# HS chapters are indicative starter tags for matching, NOT tariff classifications —
+# never publish an exposure figure without confirming the product-level code.
+# The cluster lens must be earned by matching hs_chapters/keywords hit in a signal;
+# pipeline/clusters.py never forces a cluster onto an unrelated story.
+clusters:
+  - id: tirupur
+    label: Tirupur
+    products: [knitted apparel]
+    hs_chapters: ["61"]
+    sensitivities: [us_tariff_tier, uk_ceta, rosctl, bangladesh_preferences]
+
+  - id: karur
+    label: Karur
+    products: [home textiles, made-ups]
+    hs_chapters: ["63"]
+    sensitivities: [rosctl, eu_fta, us_tariffs]
+
+  - id: coimbatore
+    label: Coimbatore
+    products: [pumps, motors, castings, engineering goods]
+    hs_chapters: ["8413", "8501", "73"]
+    sensitivities: [cbam_steel_content, us_section_232_301, eu_fta]
+
+  - id: erode
+    label: Erode
+    products: [turmeric, textiles]
+    hs_chapters: ["0910", "52", "63"]
+    sensitivities: [sps_limits, rasff, fda]
+
+  - id: namakkal
+    label: Namakkal
+    products: [eggs, poultry]
+    hs_chapters: ["0407"]
+    sensitivities: [gulf_demand, sps_rules, hormuz_shipping]
+
+  - id: ambur_vellore_ranipet
+    label: Ambur / Vellore / Ranipet
+    products: [leather, footwear]
+    hs_chapters: ["41", "42", "64"]
+    sensitivities: [eudr, uk_ceta]
+
+  - id: tuticorin
+    label: Tuticorin
+    products: [marine products, port-linked trade]
+    hs_chapters: ["03"]
+    sensitivities: [us_cvd_ad_shrimp, sps, freight]
+
+  - id: chennai_hosur
+    label: Chennai / Hosur
+    products: [auto components, electronics]
+    hs_chapters: ["8708", "85"]
+    sensitivities: [us_tariffs, eu_fta_rules_of_origin]

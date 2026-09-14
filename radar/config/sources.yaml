@@ -1,0 +1,326 @@
+# Source registry — Section 4 / export_intelligence_system.md "source universe".
+# kind: primary | secondary
+# signal_type: early | confirm | enforced | context
+# method: rss | api | pagewatch | email | manual
+#   rss/api/pagewatch are automated in v1. email/manual are registered for
+#   completeness and extensibility (Section 4) but not collected until a
+#   later phase (needs an inbox connector or portal-specific scraper).
+# reliability_1to5: editorial judgement, used as a scoring input (evidence quality).
+sources:
+  # --- A. India (core, daily) ---
+  - id: dgft_notifications
+    name: DGFT Notifications
+    url: https://www.dgft.gov.in/CP/?opt=notification
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: pagewatch
+    country: IN
+    category: customs_dgft
+    reliability_1to5: 5
+    active: true
+
+  - id: dgft_trade_notices
+    name: DGFT Trade Notices
+    url: https://www.dgft.gov.in/CP/?opt=trade-notices
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: pagewatch
+    country: IN
+    category: customs_dgft
+    reliability_1to5: 5
+    active: true
+
+  - id: dgft_public_notices
+    name: DGFT Public Notices
+    url: https://www.dgft.gov.in/CP/?opt=public-notice
+    kind: primary
+    signal_type: confirm
+    cadence: daily
+    method: pagewatch
+    country: IN
+    category: customs_dgft
+    reliability_1to5: 5
+    active: true
+
+  - id: cbic_customs_notifications
+    name: CBIC Customs Notifications (Tariff & Non-Tariff)
+    url: https://www.cbic.gov.in/entities/customs-notfns
+    kind: primary
+    signal_type: confirm
+    cadence: daily
+    method: pagewatch
+    country: IN
+    category: customs_cbic
+    reliability_1to5: 5
+    active: true
+
+  - id: icegate_advisories
+    name: ICEGATE Advisories
+    url: https://www.icegate.gov.in/Webappl/Notification
+    kind: primary
+    signal_type: early
+    cadence: weekly
+    method: pagewatch
+    country: IN
+    category: customs_cbic
+    reliability_1to5: 4
+    active: true
+
+  - id: rbi_press_releases
+    name: RBI Press Releases (FEMA / master directions surface here first)
+    url: https://www.rbi.org.in/pressreleases_rss.xml
+    kind: primary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: fx_payments
+    reliability_1to5: 5
+    active: true
+
+  - id: dgtr_cases
+    name: DGTR Anti-Dumping / Safeguard Cases
+    url: https://www.dgtr.gov.in/anti-dumping-cases
+    kind: primary
+    signal_type: early
+    cadence: weekly
+    method: pagewatch
+    country: IN
+    category: trade_remedies
+    reliability_1to5: 4
+    active: true
+
+  - id: pib_commerce
+    name: PIB — Ministry of Commerce & Industry
+    url: "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3"
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: IN
+    category: government_scheme
+    reliability_1to5: 5
+    active: true
+
+  - id: pib_finance
+    name: PIB — Ministry of Finance
+    url: "https://pib.gov.in/RssMain.aspx?ModId=8&Lang=1&Regid=3"
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: IN
+    category: government_scheme
+    reliability_1to5: 5
+    active: true
+
+  - id: fieo
+    name: FIEO (Federation of Indian Export Organisations)
+    url: https://www.fieo.org/
+    kind: primary
+    signal_type: context
+    cadence: weekly
+    method: manual
+    country: IN
+    category: export_promotion
+    reliability_1to5: 3
+    active: false
+    notes: "No stable feed; needs a portal-specific scraper. Registered for completeness (Section 4)."
+
+  # --- B. International / multilateral ---
+  - id: wto_eping
+    name: WTO ePing (SPS/TBT notifications)
+    url: https://eping.wto.org/en
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: email
+    country: INTL
+    category: tbt_sps
+    reliability_1to5: 5
+    active: false
+    notes: "Best early-warning source per spec, but delivered by email digest — needs an inbox connector (Phase 2 follow-up), not a page/RSS."
+
+  - id: wto_news
+    name: WTO News
+    url: https://www.wto.org/english/news_e/rss_e.xml
+    kind: primary
+    signal_type: context
+    cadence: daily
+    method: rss
+    country: INTL
+    category: trade_agreements
+    reliability_1to5: 4
+    active: true
+
+  # --- C. United States ---
+  - id: federal_register_india
+    name: US Federal Register — documents mentioning India
+    url: https://www.federalregister.gov/api/v1/documents.json
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: api
+    country: US
+    category: tariffs_trade_remedies
+    reliability_1to5: 5
+    active: true
+    query: "India"
+
+  - id: federal_register_antidumping_india
+    name: US Federal Register — antidumping/countervailing duty, India
+    url: https://www.federalregister.gov/api/v1/documents.json
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: api
+    country: US
+    category: trade_remedies
+    reliability_1to5: 5
+    active: true
+    query: "countervailing duty India"
+
+  - id: us_fda_import_alerts
+    name: US FDA Import Alerts
+    url: https://www.accessdata.fda.gov/cms_ia/
+    kind: primary
+    signal_type: enforced
+    cadence: monthly
+    method: manual
+    country: US
+    category: sps_food_alert
+    reliability_1to5: 4
+    active: false
+    notes: "Portal requires product-specific queries; automate in Phase 2 follow-up."
+
+  # --- D. European Union ---
+  - id: ec_trade_news
+    name: European Commission — DG TRADE news
+    url: https://policy.trade.ec.europa.eu/news_en
+    kind: primary
+    signal_type: context
+    cadence: weekly
+    method: manual
+    country: EU
+    category: trade_agreements
+    reliability_1to5: 4
+    active: false
+    notes: "No confirmed stable RSS at time of build; revisit."
+
+  - id: eu_rasff
+    name: EU RASFF Portal (food/feed alerts)
+    url: https://webgate.ec.europa.eu/rasff-window/screen/list
+    kind: primary
+    signal_type: enforced
+    cadence: monthly
+    method: manual
+    country: EU
+    category: sps_food_alert
+    reliability_1to5: 4
+    active: false
+    notes: "Requires authenticated/JS portal query; Phase 2 follow-up (Rejection Watch franchise)."
+
+  # --- E. Other markets (extensible, not yet automated) ---
+  - id: uk_trade_remedies_authority
+    name: UK Trade Remedies Authority
+    url: https://www.gov.uk/government/organisations/trade-remedies-authority
+    kind: primary
+    signal_type: early
+    cadence: weekly
+    method: manual
+    country: GB
+    category: trade_remedies
+    reliability_1to5: 4
+    active: false
+
+  - id: gacc_china
+    name: China GACC (General Administration of Customs)
+    url: http://www.customs.gov.cn/
+    kind: primary
+    signal_type: early
+    cadence: weekly
+    method: manual
+    country: CN
+    category: customs_other
+    reliability_1to5: 3
+    active: false
+
+  # --- F. News & analysis (confirmation, saturation measurement) ---
+  - id: google_news_india_tariffs
+    name: Google News — India export tariffs
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 3
+    active: true
+    query: "India exports tariff"
+
+  - id: google_news_rodtep_roscl
+    name: Google News — RoDTEP / RoSCTL
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: incentives
+    reliability_1to5: 3
+    active: true
+    query: "RoDTEP OR RoSCTL"
+
+  - id: google_news_customs_dgft
+    name: Google News — DGFT / customs notification
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: customs_dgft
+    reliability_1to5: 3
+    active: true
+    query: "DGFT notification OR customs notification India"
+
+  - id: et_foreign_trade
+    name: Economic Times — Foreign Trade
+    url: https://economictimes.indiatimes.com/news/economy/foreign-trade/rssfeeds/1898055.cms
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 4
+    active: true
+
+  - id: business_standard_economy
+    name: Business Standard — Economy & Policy
+    url: https://www.business-standard.com/rss/economy-policy-102.rss
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 4
+    active: true
+
+  # --- G. Proprietary (the moat, per spec — not a URL collector) ---
+  - id: field_notes
+    name: Proprietary field notes (advisory calls, LEAP questions, CHA network)
+    url: null
+    kind: primary
+    signal_type: early
+    cadence: continuous
+    method: manual
+    country: IN
+    category: field_intelligence
+    reliability_1to5: 5
+    active: false
+    notes: "Section 4 Group F. Needs a 60-second intake form, not a collector. Out of scope for v1 automation; add as a manual raw_items entry point."

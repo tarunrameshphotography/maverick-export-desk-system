@@ -1,0 +1,72 @@
+# Canonical signal taxonomy (Section 5). New categories can be appended
+# without code changes — pipeline/entities.py and scoring.py read this list
+# and fall back to "uncategorised" for anything unmapped.
+categories:
+  - id: tariffs
+    label: Tariffs
+  - id: trade_agreements
+    label: Trade agreements
+  - id: rules_of_origin
+    label: Rules of origin
+  - id: customs_dgft
+    label: Customs (DGFT)
+  - id: customs_cbic
+    label: Customs (CBIC)
+  - id: customs_other
+    label: Customs (foreign)
+  - id: trade_remedies
+    label: Trade remedies (general)
+  - id: anti_dumping
+    label: Anti-dumping
+  - id: countervailing_duty
+    label: Countervailing duties
+  - id: safeguards
+    label: Safeguards
+  - id: tbt_sps
+    label: Technical barriers to trade / SPS
+  - id: product_standards
+    label: Product standards
+  - id: import_restrictions
+    label: Import bans/restrictions
+  - id: sps_food_alert
+    label: Food/health/product alerts
+  - id: carbon_environment
+    label: Carbon / environmental regulation
+  - id: sanctions
+    label: Sanctions
+  - id: geopolitics
+    label: Geopolitics
+  - id: shipping_logistics
+    label: Shipping / logistics / freight / ports
+  - id: fx_payments
+    label: FX / payment rules
+  - id: export_finance
+    label: Export finance
+  - id: incentives
+    label: Government incentives (RoDTEP, RoSCTL, drawback)
+  - id: government_scheme
+    label: Government scheme (general)
+  - id: msme_policy
+    label: MSME policy
+  - id: market_demand
+    label: Market demand
+  - id: commodity_movements
+    label: Commodity movements
+  - id: buyer_signals
+    label: Buyer / importer signals
+  - id: competitor_policy
+    label: Competitor-country policy changes
+  - id: trade_statistics
+    label: Trade statistics
+  - id: sector_cluster
+    label: Sector / cluster developments
+  - id: legal_ruling
+    label: Legal / customs rulings
+  - id: export_promotion
+    label: Export promotion
+  - id: field_intelligence
+    label: Proprietary field intelligence
+  - id: news_confirmation
+    label: News confirmation (secondary, saturation measurement only)
+  - id: uncategorised
+    label: Uncategorised

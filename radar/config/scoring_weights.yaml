@@ -1,0 +1,101 @@
+# Content scoring model (Section 13 / INTELLIGENCE SYSTEM/content_scoring_model.md, Part 12).
+# All weights, thresholds and penalties are configurable here — pipeline/scoring.py
+# must not hard-code any of these numbers.
+
+gates:
+  # Each gate must pass (true) or the signal is auto-discarded before scoring.
+  g1_evidence_required: true       # >=1 primary source OR >=2 independent secondaries
+  g2_indian_implication_required: true
+  g3_repeat_window_days: 14        # discard as repeat unless a genuine new development
+  g4_reject_unverifiable_numbers: true
+
+criteria:
+  # weight sums to 100; each criterion is scored 0-5 by pipeline/scoring.py,
+  # contribution = weight * (score / 5)
+  - id: exporter_impact
+    label: "Exporter impact (money, time or risk at stake)"
+    weight: 20
+  - id: actionability
+    label: "Actionability"
+    weight: 15
+  - id: angle_strength
+    label: "Maverick angle strength"
+    weight: 15
+  - id: indian_exposure
+    label: "Indian exposure (breadth x specificity)"
+    weight: 12
+  - id: under_coverage
+    label: "Under-coverage (inverse saturation)"
+    weight: 12
+  - id: time_sensitivity
+    label: "Time sensitivity"
+    weight: 10
+  - id: explainability
+    label: "Explainability"
+    weight: 6
+  - id: audience_fit
+    label: "Audience-business fit"
+    weight: 5
+  - id: evidence_quality
+    label: "Evidence quality"
+    weight: 5
+
+confidence_multiplier:
+  primary_verified: 1.0
+  credible_secondary_pending: 0.85
+
+penalties:
+  geopolitical_sensitivity: 5
+  speculation_min: 5
+  speculation_max: 15
+  near_repeat: 10
+
+saturation_bands:
+  # count of matching Indian news items / LinkedIn posts in the last 72h -> score 0-5
+  - max_items: 2
+    score: 5
+    label: under-covered
+  - max_items: 10
+    score: 3
+    label: lightly covered
+  - max_items: 999999
+    score: 1
+    label: heavily saturated
+
+decision_thresholds:
+  lead_signal: 75
+  secondary: 60
+  watchlist: 45
+  # below watchlist -> discard (logged)
+
+review_tiers:
+  green:
+    description: "Evergreen/news-pegged explainers, Freight Pulse, settled Ask the Desk"
+    requires: [claims_table_complete, analyst_self_check]
+    approver: analyst
+  amber:
+    description: "Policy/data/FTA interpretation, Countdowns, Second Order, Headline vs Reality"
+    requires: [primary_document_verified, numeric_claims_quoted, interpretation_labelled, premortem_line]
+    approver: founder
+  red:
+    description: "Incentives/scrips, duty liability, eligibility, legal interpretation, named companies, trade-remedy cases, geopolitics"
+    requires: [all_amber_checks, disclosure_line_if_scrip, partner_ca_check, uncertainty_ladder_review]
+    approver: founder_plus_external_check
+
+disclosure_triggers:
+  # any signal whose extracted schemes/categories intersect this list gets
+  # disclosure_required=true on its drafts (Section 19).
+  schemes: [rodtep, rosctl, duty_drawback, scrip]
+  categories: [incentives]
+
+model_routing:
+  # Placeholders only in v1 hybrid mode (no live API calls) — kept here so the
+  # switch to direct API calls later (Section 25) is a config change, not a rewrite.
+  cheap_fast_model: "claude-haiku-4-5"
+  deep_analysis_model: "claude-opus-5"
+  mode: "hybrid_interactive"   # hybrid_interactive | direct_api
+
+feature_flags:
+  auto_publish: false           # MUST stay false in v1 (Section 30, mandatory)
+  saturation_live_query: true   # false disables the Google News saturation check (offline/sample mode)
+  pagewatch_enabled: true

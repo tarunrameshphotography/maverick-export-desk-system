@@ -1,0 +1,1105 @@
+<title>Maverick Minds Export Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..100,500..800&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400&display=swap">
+<style>
+:root{
+  --paper:#F3F3F0; --surface:#FBFBF9; --ink:#262628; --muted:#5E5D60; --rule:#D8D7D2;
+  --stamp:#B22D31; --stamp-soft:#F7E5E4; --deadline:#8A5B00; --deadline-soft:#F5ECD6;
+  --fact:#1D6A50; --fact-soft:#E2F0EA; --code:#ECECE7;
+  --display:"Archivo","Arial Narrow",Arial,sans-serif;
+  --body:"Source Serif 4",Georgia,"Times New Roman",serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#151517; --surface:#1D1D20; --ink:#E9E7E6; --muted:#A5A2A3; --rule:#303034;
+    --stamp:#F27E82; --stamp-soft:#3A1D20; --deadline:#E2B457; --deadline-soft:#332917;
+    --fact:#72C9A5; --fact-soft:#16302A; --code:#212124;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#151517; --surface:#1D1D20; --ink:#E9E7E6; --muted:#A5A2A3; --rule:#303034;
+  --stamp:#F27E82; --stamp-soft:#3A1D20; --deadline:#E2B457; --deadline-soft:#332917;
+  --fact:#72C9A5; --fact-soft:#16302A; --code:#212124;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.62;padding-inline:20px;padding-block:0}
+a{color:var(--stamp);text-underline-offset:2px}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--stamp);outline-offset:2px}
+.wrap{display:grid;grid-template-columns:232px minmax(0,1fr);gap:56px;max-width:1200px;margin:0 auto;padding-block:40px 110px}
+nav.toc{position:sticky;top:20px;align-self:start;max-height:calc(100vh - 40px);overflow:auto;font-family:var(--display);font-size:13px;line-height:1.35;padding-right:6px}
+nav.toc summary{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);cursor:pointer;margin-bottom:10px;list-style:none}
+nav.toc ol{list-style:none;margin:0;padding:0;display:grid;gap:2px}
+nav.toc a{display:grid;grid-template-columns:26px 1fr;gap:4px;padding:4px 6px;border-radius:3px;color:var(--ink);text-decoration:none}
+nav.toc a:hover{background:var(--stamp-soft)}
+nav.toc a span{font-family:var(--mono);font-size:11px;color:var(--muted);padding-top:1px}
+main{min-width:0;max-width:880px}
+main p,main li{max-width:70ch}
+main p{margin:0 0 1em}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+header.cover{border-bottom:1px solid var(--rule);padding-bottom:28px;margin-bottom:36px}
+.logo-plate{display:inline-block;background:#FFFFFF;border-radius:4px;padding:10px 14px;margin-bottom:18px;line-height:0}
+.logo-plate img{display:block;width:220px;max-width:100%;height:auto}
+h1{font-family:var(--display);font-variation-settings:"wdth" 78;font-weight:800;font-size:clamp(2.3rem,5.4vw,3.7rem);line-height:1.02;letter-spacing:-.01em;margin:12px 0 14px;text-wrap:balance}
+.lede{font-size:1.2rem;line-height:1.5;max-width:60ch;color:var(--ink)}
+.meta{display:flex;flex-wrap:wrap;gap:10px 28px;margin-top:20px;font-family:var(--display);font-size:13.5px;color:var(--muted)}
+.meta b{color:var(--ink);font-weight:600}
+section.part{padding-top:26px;margin-top:46px;border-top:2px solid var(--ink)}
+.part-label{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--stamp)}
+h2{font-family:var(--display);font-variation-settings:"wdth" 84;font-weight:760;font-size:clamp(1.6rem,3.4vw,2.15rem);line-height:1.1;margin:6px 0 18px;text-wrap:balance}
+h3{font-family:var(--display);font-weight:680;font-size:1.18rem;line-height:1.25;margin:30px 0 10px;text-wrap:balance}
+h4{font-family:var(--display);font-weight:650;font-size:1rem;margin:20px 0 6px}
+ul,ol{padding-left:1.2em;margin:0 0 1.1em}
+li{margin:.25em 0}
+strong{font-weight:600}
+.tag{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:500;letter-spacing:.07em;text-transform:uppercase;padding:1px 6px;border:1px solid currentColor;border-radius:3px;vertical-align:2px;line-height:1.5;white-space:nowrap}
+.t-fact{color:var(--fact)} .t-int{color:var(--stamp)} .t-fc{color:var(--deadline)} .t-op{color:var(--muted)} .t-ver{color:var(--deadline)}
+.date{font-family:var(--mono);font-size:.9em;color:var(--deadline);white-space:nowrap}
+.mono{font-family:var(--mono);font-size:.88em}
+.answer{background:var(--surface);border:1px solid var(--rule);padding:24px 26px;border-radius:4px;margin:0 0 28px}
+.answer h2{margin-top:0}
+.answer .big{font-family:var(--display);font-variation-settings:"wdth" 86;font-size:clamp(1.25rem,2.6vw,1.6rem);line-height:1.25;font-weight:650;margin:0 0 14px;max-width:44ch;text-wrap:balance}
+.stamp{border:1.5px dashed var(--stamp);border-radius:4px;padding:16px 20px 12px;margin:22px 0;background:transparent}
+.stamp>.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--stamp);display:block;margin-bottom:6px}
+.stamp p:last-child,.stamp ul:last-child{margin-bottom:0}
+.deadline-box{border:1.5px solid var(--deadline);background:var(--deadline-soft);border-radius:4px;padding:16px 20px 10px;margin:22px 0}
+.deadline-box>.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--deadline);display:block;margin-bottom:6px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-family:var(--display);font-size:13px;color:var(--muted);margin-top:14px}
+.tbl{overflow-x:auto;margin:16px 0 22px;border:1px solid var(--rule);border-radius:4px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-family:var(--display);font-size:13.5px;line-height:1.42}
+th,td{text-align:left;vertical-align:top;padding:9px 12px;border-bottom:1px solid var(--rule)}
+th{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600;background:var(--paper);position:sticky;top:0}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td .sub{display:block;color:var(--muted);font-size:12.5px;margin-top:2px}
+.wide table{min-width:760px}
+.xwide table{min-width:980px}
+.receipt{font-family:var(--mono);font-size:12px;line-height:1.5;color:var(--muted);border-top:1px dotted var(--rule);padding-top:8px;margin-top:10px}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;margin:16px 0 22px}
+.cell{border:1px solid var(--rule);border-radius:4px;padding:14px 16px;background:var(--surface)}
+.cell h4{margin-top:0}
+.cell p,.cell ul{font-size:15.5px}
+.cell p:last-child,.cell ul:last-child{margin-bottom:0}
+pre{font-family:var(--mono);font-size:12.5px;line-height:1.5;background:var(--code);border:1px solid var(--rule);border-radius:4px;padding:14px 16px;overflow-x:auto;margin:14px 0 22px}
+ol.pipeline{list-style:none;padding:0;margin:18px 0 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;counter-reset:stage}
+ol.pipeline li{counter-increment:stage;border:1px solid var(--rule);background:var(--surface);border-radius:4px;padding:12px 14px;margin:0;font-family:var(--display);font-size:13.5px;line-height:1.4}
+ol.pipeline li::before{content:"Stage " counter(stage);display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+ol.pipeline li b{display:block;font-size:14.5px;margin-bottom:3px}
+ol.pipeline li.gate{border:1.5px dashed var(--stamp);background:var(--stamp-soft)}
+ol.pipeline li.gate::before{color:var(--stamp)}
+.lanes{display:grid;gap:10px;margin:16px 0 24px}
+.lane{display:grid;grid-template-columns:150px 1fr;gap:14px;align-items:start;border:1px solid var(--rule);border-radius:4px;background:var(--surface);padding:12px 14px}
+.lane .who{font-family:var(--display);font-weight:680;font-size:14px}
+.lane .who small{display:block;font-weight:500;color:var(--muted);font-size:12px}
+.steps{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-family:var(--display);font-size:13px}
+.steps span{border:1px solid var(--rule);border-radius:3px;padding:3px 8px;background:var(--paper)}
+.steps span.money{border-color:var(--fact);color:var(--fact)}
+.steps i{font-style:normal;color:var(--muted)}
+.voice{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0 22px}
+.voice div{border:1px solid var(--rule);border-radius:4px;padding:12px 14px;background:var(--surface);font-size:15.5px}
+.voice .no{color:var(--muted)}
+.voice .lbl{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:4px}
+.voice .no .lbl{color:var(--deadline)} .voice .yes .lbl{color:var(--fact)}
+footer{margin-top:60px;border-top:1px solid var(--rule);padding-top:16px;font-family:var(--display);font-size:13px;color:var(--muted)}
+.sources{font-size:14px}
+.sources li{max-width:none;overflow-wrap:anywhere}
+@media (max-width:920px){
+  .wrap{grid-template-columns:minmax(0,1fr);gap:18px;padding-block:24px 80px}
+  nav.toc{position:static;max-height:none;border:1px solid var(--rule);border-radius:4px;padding:10px 12px;background:var(--surface)}
+  .voice{grid-template-columns:1fr}
+  .lane{grid-template-columns:1fr;gap:6px}
+}
+@media (max-width:480px){body{font-size:16px;padding-inline:16px}}
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Contents">
+<details open id="toc-details">
+<summary>Contents</summary>
+<ol>
+<li><a href="#answer"><span>—</span>The answer, first</a></li>
+<li><a href="#corrections"><span>—</span>Corrections to the brief</a></li>
+<li><a href="#p1"><span>01</span>Business understanding</a></li>
+<li><a href="#p2"><span>02</span>Market analysis</a></li>
+<li><a href="#p3"><span>03</span>Competitor analysis</a></li>
+<li><a href="#p4"><span>04</span>Positioning</a></li>
+<li><a href="#p5"><span>05</span>Brand voice</a></li>
+<li><a href="#p6"><span>06</span>Audiences &amp; journeys</a></li>
+<li><a href="#p7"><span>07</span>LinkedIn strategy</a></li>
+<li><a href="#p8"><span>08</span>Instagram strategy</a></li>
+<li><a href="#p9"><span>09</span>Content architecture</a></li>
+<li><a href="#p10"><span>10</span>Export intelligence system</a></li>
+<li><a href="#p11"><span>11</span>Daily research system</a></li>
+<li><a href="#p12"><span>12</span>Content scoring model</a></li>
+<li><a href="#p13"><span>13</span>Automation architecture</a></li>
+<li><a href="#p14"><span>14</span>Content memory database</a></li>
+<li><a href="#p15"><span>15</span>Approval workflow</a></li>
+<li><a href="#p16"><span>16</span>Performance &amp; learning loop</a></li>
+<li><a href="#p17"><span>17</span>30-day editorial plan</a></li>
+<li><a href="#sources"><span>—</span>Sources</a></li>
+</ol>
+</details>
+</nav>
+
+<main>
+<header class="cover">
+<div class="logo-plate"><img src="logo-web.png" alt="Maverick Minds" width="560" height="183"></div>
+<div class="eyebrow">Maverick Minds · Strategy dossier · Prepared 14 September 2026</div>
+<h1>The Export Desk: how Maverick Minds becomes the account exporters check first</h1>
+<p class="lede">Positioning, content, research and automation strategy for an export-intelligence brand, built from current research on the market, the competitors and the incentive schemes. It covers LinkedIn, Instagram, LEAP and the scrip business.</p>
+<div class="meta">
+<div>Prepared for <b>Mr. V Keerthivhasan</b>, Maverick Minds</div>
+<div>Status <b>Draft for founder review</b></div>
+<div>Research cut-off <b>14 Sep 2026</b></div>
+</div>
+<div class="legend" aria-label="Evidence labels used in this document">
+<span>Evidence labels used throughout:</span>
+<span class="tag t-fact">Fact</span><span>verified against a source</span>
+<span class="tag t-int">Interpretation</span><span>our reading of facts</span>
+<span class="tag t-fc">Forecast</span><span>a call about the future</span>
+<span class="tag t-op">Opinion</span><span>a judgement</span>
+<span class="tag t-ver">Verify</span><span>confirm on a primary source before publishing</span>
+</div>
+</header>
+
+<section id="answer" class="answer" aria-labelledby="answer-h">
+<div class="eyebrow">The central problem, solved first</div>
+<h2 id="answer-h">Why would an exporter follow Maverick Minds?</h2>
+<p class="big">Not because it is first with the news. Because it is first with the consequences.</p>
+<p>Maverick Minds cannot out-speed Reuters or the Business Standard trade desk, and it cannot out-rank GTRI on national policy commentary. It doesn't need to. Every one of those sources stops at the headline. Nobody reliably does the next step: read the primary document, and work out what it does to a <em>specific</em> Indian product, destination market and manufacturing cluster, then say what an exporter should do this week.</p>
+<p>That step is the gap, and it is wide. In 2026 alone, the rules an Indian exporter prices against changed many times over:</p>
+<ul>
+<li>US tariffs on Indian goods went from 50% to a deal at 18%, then to a temporary 10% tariff, then to a Section 301 tier.</li>
+<li>RoDTEP rates were halved and then restored within a month.</li>
+<li>The Strait of Hormuz closed to routine shipping.</li>
+<li>A new FEMA export regime takes effect on 1 October.</li>
+</ul>
+<p>When the rules move this fast, evergreen "how to export" content goes stale quickly, and interpretation becomes the scarce thing.</p>
+<p><strong>Recommended positioning:</strong> <em>The export intelligence desk for Indian MSMEs. Everyone reports the headline; we work out what it does to your order book, with the source document attached.</em></p>
+<h3>Ten decisions this document argues for</h3>
+<ol>
+<li><strong>Own consequences, not scoops.</strong> "What everyone else missed" becomes "the implication everyone else skipped". That claim is defensible every day. "We found hidden news" is not.</li>
+<li><strong>Show receipts on every post.</strong> Each intelligence post names its primary source (the notification number, the Federal Register document, the ePing ID). This alone separates Maverick Minds from 90% of export content.</li>
+<li><strong>Keep a public Calls Ledger.</strong> Log every forward-looking flag, revisit it on a set date, and grade it in public. No one in Indian export content does this. It turns claims into a track record.</li>
+<li><strong>Put the founder first on LinkedIn.</strong> Mr. Keerthivhasan is the byline and the face, as <em>the analyst</em>, not a guru. The company page is the archive and home of the newsletter.</li>
+<li><strong>Research daily, publish five days a week.</strong> Post five times a week, plus a Saturday brief, rather than seven thin posts. A quality floor beats a streak.</li>
+<li><strong>Lean on four signature franchises</strong> for about 80% of output: <em>The Fine Print</em>, <em>Second Order</em>, <em>Countdown</em> and <em>Headline vs Reality</em>.</li>
+<li><strong>Separate the scrip desk from the intelligence feed, and disclose.</strong> It is also a business with policy risk: RoDTEP's current extension ends on <span class="date">30 SEP 2026</span> and its FY27 budget was cut 45%.</li>
+<li><strong>Narrow LEAP.</strong> Build it for business owners who already make or trade something and want their first export shipment done properly. Don't build it for "side-income" seekers. Run it as a cohort, not a video library.</li>
+<li><strong>Give Instagram a different job.</strong> It explains, in Tamil and English, and feeds LEAP. It never copies LinkedIn. WhatsApp becomes the owned channel, because that is where MSME owners actually read.</li>
+<li><strong>Automate the research, never the judgement.</strong> Machines collect, deduplicate, triage, score and draft. A human picks the story, checks the claims and approves. Nothing auto-publishes.</li>
+</ol>
+</section>
+
+<section id="corrections" aria-labelledby="corr-h">
+<div class="part-label">Before the strategy</div>
+<h2 id="corr-h">Corrections and additions to the brief</h2>
+<p>The brief asked me to correct anything technically incomplete. These points matter for both content accuracy and the scrip business. Where I relied on secondary sources, the item carries a Verify label.</p>
+<div class="tbl wide"><table>
+<thead><tr><th>Brief says / implies</th><th>What research shows</th><th>Label</th></tr></thead>
+<tbody>
+<tr><td>Scrips are "traded"</td><td>RoDTEP and RoSCTL credit is issued as an <strong>e-scrip in an electronic duty-credit ledger on ICEGATE</strong>. Transfer is IEC-to-IEC. The transferor enters the transferee's ICEGATE ID and IEC, and <strong>both sides confirm by OTP</strong>. There is no exchange: price is negotiated privately, typically a small discount to face value (secondary sources cite roughly 2–4%).<span class="sub">ICEGATE Advisory 06/2021 (rev. 5 Jan 2024); pricing from market blogs, not official</span></td><td><span class="tag t-fact">Fact</span> <span class="tag t-ver">Verify price</span></td></tr>
+<tr><td>Importers use scrips toward "applicable import-duty obligations"</td><td>Narrower than that. Duty credit pays only <strong>duty leviable under the First Schedule to the Customs Tariff Act, 1975, i.e. Basic Customs Duty</strong>. It cannot pay IGST or other levies. So <strong>scrip demand is tied to how much BCD importers pay.</strong> Every FTA that cuts BCD (UK CETA in force <span class="date">15 JUL 2026</span>; the EU FTA to follow) and every Budget BCD cut shrinks that demand over time.<span class="sub">Notification 24/2023-Customs (N.T.); ICEGATE advisory</span></td><td><span class="tag t-fact">Fact</span> <span class="tag t-int">Interpretation</span></td></tr>
+<tr><td>Scheme is a stable service line</td><td>RoDTEP has run on short extensions:<ul><li>Notification 60/2025-26 <strong>halved rates and value caps</strong> on <span class="date">23 FEB 2026</span>, except HS chapters 01–24.</li><li>Notification 66/2025-26 <strong>restored</strong> them on <span class="date">23 MAR 2026</span>, citing the maritime situation.</li><li>Notification 74/2025-26 <strong>extended the scheme to <span class="date">30 SEP 2026</span></strong> for DTA, AA, SEZ and EOU exports.</li></ul>FY27 allocation was cut to <strong>₹10,000 crore</strong> from ₹18,233 crore. RoSCTL is extended to <span class="date">30 SEP 2026</span> "or until approval of the Scheme for the 16th Finance Commission cycle, whichever is earlier". <strong>I found no announcement on what follows 30 September</strong> as of 14 September.</td><td><span class="tag t-fact">Fact</span> <span class="tag t-ver">Check daily</span></td></tr>
+<tr><td>Scrips are valid for a year</td><td>Secondary sources report validity was changed from 1 year to <strong>2 years from creation in the ledger</strong> by a CBIC amendment to the Electronic Duty Credit Ledger Regulations (Sept 2022). Unused credit lapses after that.</td><td><span class="tag t-ver">Verify on CBIC</span></td></tr>
+<tr><td>Buyer risk is low</td><td>The <strong>14 Sept 2022 amendments</strong> to Notifications 76/2021 and 77/2021 removed recovery from the <em>transferee</em> for excess credit; recovery now runs against the exporter. That followed Delhi HC W.P.(C) 11178/2022. Fraud-linked recovery under Section 28AAA also runs against the person to whom the instrument was issued. Buyer-side due diligence is still good practice: check the scrip is active and not suspended.</td><td><span class="tag t-fact">Fact</span> <span class="tag t-ver">Verify current text</span></td></tr>
+<tr><td>"Export incentive"</td><td>Officially RoDTEP is a <strong>remission</strong> of embedded, un-refunded taxes: fuel duty, electricity duty, mandi tax and similar. The framing matters: US Commerce has treated RoDTEP as <strong>countervailable</strong> in several CVD cases against Indian products (e.g. paper file folders, 2023). So Maverick Minds content should never call it a "subsidy" or "free money".</td><td><span class="tag t-fact">Fact</span></td></tr>
+<tr><td>(not in brief) Compliance</td><td>An <strong>Annual RoDTEP Return (ARR)</strong> is mandatory for IECs claiming more than ₹1 crore a year. Late filing attracts composition fees, and missing it suspends benefits. Duty credit is also conditional on <strong>realising export proceeds</strong> within the FEMA period, or it is recovered with interest. GST on transferring duty credit scrips is <strong>nil</strong> (entry 122A, Notification 35/2017-CT(Rate)).</td><td><span class="tag t-fact">Fact</span></td></tr>
+</tbody></table></div>
+<div class="stamp"><span class="lbl">Challenge · the scrip business</span>
+<p>The scrip line depends on three things Maverick Minds doesn't control:</p>
+<ul>
+<li>the scheme continuing past <span class="date">30 SEP 2026</span></li>
+<li>its budget, now cut 45%</li>
+<li>importers' BCD bills, which FTAs are steadily shrinking</li>
+</ul>
+<p>It should be run as one part of a broader <strong>Incentive Desk</strong>, covering ARR filing, realisation compliance, drawback and Export Promotion Mission support, not as the brand's commercial core. Part 4 covers why it should also be kept out of the intelligence feed.</p></div>
+</section>
+
+<section id="p1" class="part" aria-labelledby="p1-h">
+<div class="part-label">Part 01</div>
+<h2 id="p1-h">Business understanding</h2>
+<p>Maverick Minds looks like one company but runs four businesses. Each has a different buyer, different economics and a different relationship to trust. The strategy has to be built around that fact.</p>
+<div class="tbl wide"><table>
+<thead><tr><th>Engine</th><th>Who pays</th><th>Economics</th><th>What it needs from the brand</th><th>Main risk</th></tr></thead>
+<tbody>
+<tr><td><strong>Education</strong><span class="sub">offline programmes → LEAP</span></td><td>Aspiring exporters, business owners, colleges</td><td>One-to-many and scalable once online; price-competitive market</td><td>Proof that the teacher knows the <em>current</em> reality, not 2019's</td><td>Pulled into the "earn from exports" hype market, which damages everyone else's trust</td></tr>
+<tr><td><strong>Advisory</strong><span class="sub">MSME consulting</span></td><td>Existing and export-ready MSMEs</td><td>High ticket, limited by founder time, relationship-led</td><td>Visible depth: specific, correct, sector-aware thinking</td><td>Founder bandwidth; hard to scale</td></tr>
+<tr><td><strong>Incentive &amp; scrip desk</strong></td><td>Two sides: exporters (sellers) and importers (buyers)</td><td>Transactional; thin spread; needs speed, trust and counterparties</td><td>Reliability and discretion, <em>not</em> reach</td><td>Scheme continuity, budget cuts, shrinking BCD base, and conflict of interest if mixed with commentary</td></tr>
+<tr><td><strong>Intelligence</strong><span class="sub">latent today</span></td><td>No one yet</td><td>Cost centre now; the reputation engine for the other three; possibly a paid tier later</td><td>Accuracy, a consistent cadence, a track record</td><td>One badly wrong call on a policy detail</td></tr>
+</tbody></table></div>
+<p><span class="tag t-int">Interpretation</span> The key insight: <strong>intelligence is the only content type that is valuable to every one of these buyers at once.</strong></p>
+<ul>
+<li>The MSME uses it.</li>
+<li>The importer cares about it because it moves their duty bill.</li>
+<li>The beginner is impressed by it: it shows them the teacher is operating in the real market.</li>
+</ul>
+<p>Beginner education content, by contrast, repels experienced exporters. Scrip promotion repels everyone who isn't transacting that week. So intelligence becomes the brand's spine. Education and services hang off it.</p>
+<h3>Home turf</h3>
+<p>Maverick Minds is based in Coimbatore, according to its public website and the founder's public LinkedIn profile. That puts it inside one of India's densest export-manufacturing belts:</p>
+<ul>
+<li>Tirupur knitwear, Karur home textiles and Erode turmeric</li>
+<li>Coimbatore pumps, motors and castings</li>
+<li>Namakkal eggs, Ambur and Vellore leather, and Tuticorin marine products</li>
+</ul>
+<p>National intelligence voices are Delhi-centric and national in lens. A credible <strong>cluster lens</strong> ("what this means for Tirupur") is an asset Maverick Minds can own without pretending to be national on day one.</p>
+<h3>The five strategic risks</h3>
+<ol>
+<li><strong>Founder bandwidth.</strong> The founder cannot be researcher, writer, consultant, trainer and deal-maker. The research system (Parts 10–13) exists to take research and first drafts off his plate.</li>
+<li><strong>Accuracy risk.</strong> An intelligence brand can be destroyed by one confident, wrong claim about a notification. The approval workflow (Part 15) is designed around this.</li>
+<li><strong>Hype contagion.</strong> If LEAP's marketing borrows the "lakhs per month from exports" register of the mass-market trainers, it undercuts the intelligence brand.</li>
+<li><strong>Policy dependency.</strong> See the scrip note above.</li>
+<li><strong>Conflict of interest.</strong> Commenting on RoDTEP while earning on RoDTEP transfers is legitimate only with disclosure and separation.</li>
+</ol>
+</section>
+
+<section id="p2" class="part" aria-labelledby="p2-h">
+<div class="part-label">Part 02</div>
+<h2 id="p2-h">Market analysis: the export content landscape</h2>
+<h3>Why 2026 favours an intelligence brand</h3>
+<p><span class="tag t-fact">Fact</span> The operating environment for Indian exporters has become unusually volatile this year. The list below is itself the best argument for the positioning.</p>
+<div class="tbl wide"><table>
+<thead><tr><th>Development</th><th>Status (as researched)</th><th>Why exporters feel it</th></tr></thead>
+<tbody>
+<tr><td>US tariffs on India</td><td>The Feb 2026 deal cut the rate from 50% to 18%. When Section 122 lapsed, a Section 301 two-tier tariff took effect on <span class="date">24 JUL 2026</span>, with India in the 10% tier. BTA talks continue: Goyal says India will close only when it gets a "preferential rate in comparison to our competition". A G20 trade ministerial opens <span class="date">30 SEP 2026</span>.</td><td>Landed-cost maths versus Vietnam, Bangladesh and China changes with every step</td></tr>
+<tr><td>Strait of Hormuz</td><td>Largely blocked since <span class="date">28 FEB 2026</span>; reported effectively closed to routine shipping from <span class="date">30 JUL 2026</span>; attacks continuing into September</td><td>Gulf-bound freight, war-risk cover and transit times. ICRA estimated about 14% of India's exports are linked to West Asia.</td></tr>
+<tr><td>RoDTEP / RoSCTL</td><td>Rates halved and then restored; extension ends <span class="date">30 SEP 2026</span>; FY27 budget ₹10,000 cr</td><td>Price quotes for October shipments</td></tr>
+<tr><td>FEMA export regime</td><td>New FEMA (Export and Import of Goods and Services) Regulations, 2026 take effect <span class="date">1 OCT 2026</span>: 15-month realisation (18 for INR invoices), a unified EDF, liberalised set-off. The old regime was reset to 9 months on <span class="date">5 JUN 2026</span> for the transition.</td><td>Payment terms, bank paperwork, receivable risk</td></tr>
+<tr><td>India–UK CETA</td><td>In force <span class="date">15 JUL 2026</span>. UK steel safeguard tightened; UK CBAM from <span class="date">1 JAN 2027</span>.</td><td>New margins for textiles, leather, marine, engineering; new costs for steel</td></tr>
+<tr><td>India–EU FTA</td><td>Concluded Jan 2026; Commission proposed signature to the Council in Sept 2026; entry into force expected early 2027</td><td>Rules-of-origin preparation window is <em>now</em></td></tr>
+<tr><td>EU CBAM</td><td>Definitive phase from 1 Jan 2026; certificates for 2026 imports are bought from Feb 2027</td><td>EU buyers already pricing a carbon cost into steel and aluminium orders</td></tr>
+<tr><td>EUDR</td><td>Applies <span class="date">30 DEC 2026</span> to large and medium operators; <span class="date">30 JUN 2027</span> to micro and small. Leather proposed for exclusion.</td><td>Coffee and rubber exporters get geolocation and due-diligence requests</td></tr>
+</tbody></table></div>
+<p><span class="tag t-int">Interpretation</span> In a stable year, "how exporting works" content holds its value for a long time. In a year like this one, a large share of the practical questions exporters ask has an answer that changed in the last 90 days. <strong>Interpretation of change is the scarce good.</strong> Very few players are set up to produce it.</p>
+
+<h3>What the market already produces: saturation map</h3>
+<div class="tbl wide"><table>
+<thead><tr><th>Topic or format</th><th>Saturation</th><th>Why</th><th>Maverick Minds move</th></tr></thead>
+<tbody>
+<tr><td>"How to start an export business", IEC registration, "zero-investment export"</td><td><strong>Very high</strong></td><td>Core funnel of every mass-market trainer; big YouTube and Instagram libraries</td><td>Don't compete head-on. Cover only through a "reality check" lens on Instagram.</td></tr>
+<tr><td>"Top 10 products to export from India"</td><td><strong>Very high</strong></td><td>Easy listicle; rarely backed by data; often stale</td><td>Replace with data-backed <em>Market Door</em> posts on one HS code and one market</td></tr>
+<tr><td>"What is RoDTEP / Incoterms / LC" explainers</td><td><strong>High</strong> (SEO)</td><td>Fintechs and consultancies (Skydo, Xflow, Razorpay, EximPe, Afleo, Rasp) own Google for these queries</td><td>Explain mechanics only when news makes them urgent (news-pegged explainers)</td></tr>
+<tr><td>Notification screenshot + "BIG UPDATE"</td><td><strong>High</strong></td><td>Tax portals (TaxGuru, Taxscan) and LinkedIn reposters</td><td>Same document, but lead with the consequence and the action</td></tr>
+<tr><td>FTA celebration posts ("99% of lines duty-free!")</td><td><strong>High</strong></td><td>Amplification of official messaging</td><td><em>Headline vs Reality</em>: which lines actually gained margin, against whom, and under what rules of origin</td></tr>
+<tr><td>US tariff headline recaps</td><td><strong>High</strong></td><td>Every business page</td><td>Relative-tariff analysis: India's rate versus competitor countries, per product</td></tr>
+<tr><td>Foreign draft regulations (WTO ePing SPS/TBT), EU RASFF alerts, US FDA refusals, Federal Register trade-remedy notices</td><td><strong>Very low</strong></td><td>Requires reading foreign primary sources systematically</td><td>Core franchise territory: <em>Draft Watch</em>, <em>Rejection Watch</em>, <em>Second Order</em></td></tr>
+<tr><td>Cluster-level implications (Tirupur, Karur, Coimbatore…)</td><td><strong>Very low</strong></td><td>National voices don't; local trainers do beginner content</td><td>Cluster lens on every relevant story</td></tr>
+<tr><td>Accountability for past predictions</td><td><strong>None found</strong></td><td>Nobody keeps score</td><td>The Calls Ledger</td></tr>
+</tbody></table></div>
+<h3>Overused claims (avoid all of them)</h3>
+<p>"No.1 export trainer" · "India's best" · "earn lakhs from home" · "guaranteed buyers" · "zero investment" · "100% practical" · "real exporter" as a trust badge · "Nobody is talking about this" · "BIG UPDATE" · "game-changer". Mass-market education sites lean on scale claims: one prominent trainer's site cites 730,000+ YouTube subscribers and 51,000+ students. That arms race is lost before it starts. Credibility has to come from <em>specificity</em>, not size.</p>
+</section>
+
+<section id="p3" class="part" aria-labelledby="p3-h">
+<div class="part-label">Part 03</div>
+<h2 id="p3-h">Competitor analysis</h2>
+<p>The useful unit of analysis is the <em>archetype</em>, not individual accounts. Each archetype occupies a position; the gaps between them are where Maverick Minds fits.</p>
+<div class="tbl xwide"><table>
+<thead><tr><th>Archetype</th><th>Examples (verified to exist)</th><th>What they do well</th><th>Position occupied</th><th>Gap they leave</th><th>Don't copy</th></tr></thead>
+<tbody>
+<tr><td><strong>Mass-market export trainers</strong></td><td>Export Experts Global / Harsh Dhawan (~594K Instagram followers per search snippet); Bharat Udaan Mission (Amit Mulani); iiiEM; GFE Business; @amt.india; @exportimportindiaofficial; Tamil-language channels such as "Exports &amp; Imports Business in Tamil"</td><td>Volume, social proof, beginner clarity, regional-language reach, community</td><td>"Start your export business", aspiration-led</td><td>Current, specific intelligence; anything useful to an existing exporter</td><td>Scale claims, "No.1", income insinuation, product-idea listicles</td></tr>
+<tr><td><strong>Policy think-tank voice</strong></td><td>GTRI (Ajay Srivastava, ex-Indian Trade Service); FIEO commentary (e.g. weekly interactions via the Indian Trade Portal)</td><td>Authority, data, media citations, speed on national policy</td><td>National trade policy commentary for government and media</td><td>"What do I do with my HS code this week?" and cluster or MSME specificity</td><td>Trying to out-policy GTRI. Quote and extend them instead.</td></tr>
+<tr><td><strong>Fintech / SaaS content marketers</strong></td><td>Skydo, Xflow, EximPe, Razorpay, Afleo, Rasp International, Mundhra Consulting</td><td>Well-structured SEO explainers ("RoDTEP 2026 guide")</td><td>Google search for scheme and process explainers</td><td>Timeliness, interpretation, LinkedIn-native voice</td><td>Long evergreen "guides" on LinkedIn</td></tr>
+<tr><td><strong>Tax and legal update portals</strong></td><td>TaxGuru, Taxscan, TaxTMI, Big Four alerts, CA firms</td><td>Very fast reproduction of notifications</td><td>"The notification is out"</td><td>Commercial meaning; what it does to price, cash or market access</td><td>Reproducing notification text</td></tr>
+<tr><td><strong>Trade data vendors</strong></td><td>Volza, Export Genius, Seair, Eximpedia and similar</td><td>Data-rich posts ("top buyers of X")</td><td>Lead-generation data</td><td>Context, verification, the "so what"</td><td>Unverified "top buyer" lists</td></tr>
+<tr><td><strong>News media</strong></td><td>ET, Business Standard, Mint, FE, BusinessLine, Fibre2Fashion, Maritime Gateway</td><td>Speed, access, official quotes</td><td>What happened</td><td>What it means for a specific exporter</td><td>Competing on speed</td></tr>
+<tr><td><strong>Scrip dealers</strong></td><td>Many brokers advertising "best rates"</td><td>Transaction speed</td><td>A commodity service</td><td>Trust and compliance advice around the scrip</td><td>Rate-card posts in a brand feed</td></tr>
+</tbody></table></div>
+<h3>Strategic patterns</h3>
+<ol>
+<li><strong>Education competes on scale and aspiration.</strong> That drives a race toward louder claims and lower prices. A premium, honest position is open at the top: "we teach the current reality, taught by people who work in it daily".</li>
+<li><strong>Intelligence competes on national policy</strong> and is written for policymakers and journalists. Nobody translates it down to HS code, market, cluster and action.</li>
+<li><strong>Everyone reacts to Indian announcements and big US headlines.</strong> Almost nobody mines <em>foreign primary sources</em> (ePing drafts, RASFF, FDA refusals, Federal Register, EU Official Journal) for Indian implications. That is where the "saw it first" moments actually come from.</li>
+<li><strong>No one keeps score.</strong> A public ledger of calls is the single most differentiating trust device available.</li>
+<li><strong>Regional depth exists only at beginner level.</strong> A cluster-aware intelligence voice is an empty slot.</li>
+</ol>
+<div class="stamp"><span class="lbl">Research limitation</span>
+<p>Follower counts above come from search snippets. I could not measure engagement rates, because LinkedIn and Instagram need a logged-in session. Before finalising franchise priorities, run a <strong>14-day audit</strong>:</p>
+<ul>
+<li>Pick about 15 accounts across the archetypes.</li>
+<li>Log every post's topic, format and hook, plus reactions, comments and reposts.</li>
+<li>Sample 20 commenters per account to see <em>who</em> engages (exporter, student, vendor).</li>
+</ul>
+<p>The database in Part 14 includes a <span class="mono">competitor_posts</span> table for exactly this.</p></div>
+</section>
+
+<section id="p4" class="part" aria-labelledby="p4-h">
+<div class="part-label">Part 04</div>
+<h2 id="p4-h">Positioning</h2>
+<h3>Testing "finding what everyone else missed"</h3>
+<div class="cols">
+<div class="cell"><h4>What works</h4><ul><li>It fits the name. "Maverick" earns meaning.</li><li>It is rare in the category.</li><li>It creates a reason to check the account daily.</li></ul></div>
+<div class="cell"><h4>What breaks</h4><ul><li>Taken literally, it's a speed race you lose to wires and GTRI.</li><li>It invites clickbait ("nobody is talking about this…").</li><li>It is unfalsifiable until the day you miss something, and then it's embarrassing.</li><li>Contrarian takes on policy are a reputational risk.</li></ul></div>
+</div>
+<p><span class="tag t-op">Opinion</span> <strong>Keep the spirit and change the claim.</strong> Maverick Minds shouldn't claim to find hidden news. It should claim to find the <strong>hidden implication</strong> and the <strong>buried document</strong>. The headline is public; the second-order consequence for an Indian exporter usually isn't. That claim can be proved daily, and it survives an off day.</p>
+<p>"Maverick" gets a precise, credible meaning: <strong>independent reading.</strong> In practice that means four behaviours:</p>
+<ol>
+<li>We read the primary source, not the press release about it.</li>
+<li>We say so when the fine print disagrees with the headline, including when the headline is the government's.</li>
+<li>We write our calls down and grade them in public.</li>
+<li>We say "we don't know yet" when we don't.</li>
+</ol>
+
+<h3>Positioning statement</h3>
+<div class="answer" style="margin-top:12px">
+<p style="margin:0">For Indian MSME exporters and export-ready manufacturers who can't afford a trade-policy team, <strong>Maverick Minds is the export intelligence desk</strong> that reads the primary documents of global trade and works out what they mean for your product, your market and your next contract. News reports, trainers teach the basics and think-tanks advise governments. <strong>We turn signals into exporter decisions, with receipts.</strong></p>
+</div>
+<div class="cols">
+<div class="cell"><h4>Brand promise</h4><p>Every week, at least one development that should change an Indian exporter's decisions. Sourced to the document, mapped to the product and market, with a clear "what to do".</p></div>
+<div class="cell"><h4>Line options</h4><ul><li><strong>Global trade, worked out for Indian exporters.</strong> (primary)</li><li>Before it's news, it's a notification. (intelligence franchise line)</li><li>Everyone reports the headline. We read the fine print.</li></ul></div>
+<div class="cell"><h4>Proof points to build</h4><ul><li>Source line on every post</li><li>The Calls Ledger</li><li>Public corrections</li><li>Cluster and HS specificity</li><li>Citations by EPCs, associations and media over time</li></ul></div>
+</div>
+
+<h3>Brand architecture</h3>
+<div class="tbl wide"><table>
+<thead><tr><th>Layer</th><th>Name</th><th>Role</th><th>Where it shows up</th></tr></thead>
+<tbody>
+<tr><td>Masterbrand</td><td>Maverick Minds</td><td>Export intelligence and education</td><td>Everywhere</td></tr>
+<tr><td>Reputation engine</td><td><strong>The Maverick Desk</strong></td><td>Daily intelligence; franchises; the Saturday <em>Maverick Brief</em></td><td>Founder LinkedIn, company page, newsletter, WhatsApp channel</td></tr>
+<tr><td>Scalable product</td><td><strong>LEAP</strong> — Learn. Earn. And Progress.</td><td>Cohort programme for export-ready businesses</td><td>Instagram, webinars, newsletter, colleges (B2B)</td></tr>
+<tr><td>High-trust service</td><td>Maverick Advisory</td><td>MSME export strategy and implementation</td><td>Inbound from the Desk; referrals</td></tr>
+<tr><td>Transactional service</td><td><strong>Incentive Desk</strong> (includes scrip facilitation)</td><td>RoDTEP/RoSCTL monetisation, ARR, realisation and drawback compliance, EPM guidance</td><td>WhatsApp Business, direct outreach, partner CHAs and CAs. <em>Not</em> the main feed.</td></tr>
+</tbody></table></div>
+<div class="stamp"><span class="lbl">Challenge · should scrip trading be separated?</span>
+<p><strong>Yes: in channel, in voice and with disclosure. But not in legal entity, for now.</strong></p>
+<ul>
+<li>"Maximum value! Immediate settlement!" rate posts next to a careful analysis of a DGFT notification make the analysis look like a sales funnel.</li>
+<li>Any Desk post about RoDTEP/RoSCTL carries a one-line disclosure: <em>"Disclosure: Maverick Minds facilitates RoDTEP/RoSCTL scrip transfers."</em> Disclosing openly is itself a trust signal.</li>
+<li>The Desk never makes calls on scheme continuation that could read as manipulating scrip prices. It reports the documents and the scenarios.</li>
+</ul></div>
+
+<h3>Founder or company?</h3>
+<p><span class="tag t-int">Interpretation</span> Founder-led, with the company as institution. Reasons:</p>
+<ol>
+<li>LinkedIn distribution strongly favours personal profiles over company pages. Third-party 2026 analyses consistently report several times the engagement. Treat the exact multiples as unverified, but the direction is not in dispute.</li>
+<li>Intelligence needs an accountable name. "Keerthivhasan says" can be held to account. "Maverick Minds says" is anonymous.</li>
+<li>Offline programmes already built trust in the <em>person</em>, and that trust transfers online through his face and voice.</li>
+</ol>
+<p>The company page still matters. It is the archive, the newsletter's home, the place a banker or buyer checks, and the vehicle for posts that aren't opinion (data charts, the Ledger, event notes). As the team grows, add a second byline (e.g. a research analyst) so the Desk is visibly <em>more than one person</em>, which protects the brand from single-person dependency.</p>
+</section>
+
+<section id="p5" class="part" aria-labelledby="p5-h">
+<div class="part-label">Part 05</div>
+<h2 id="p5-h">Brand voice guide</h2>
+<p><strong>The character:</strong> a senior export manager who also reads the Gazette. Unhurried, specific, commercially minded. He explains the way you'd explain to a smart client across a desk, not to a classroom.</p>
+<div class="tbl wide"><table>
+<thead><tr><th>Dimension</th><th>Setting</th><th>In practice</th></tr></thead>
+<tbody>
+<tr><td>Authority</td><td>High on facts; measured on interpretation</td><td>State facts flatly, with the source. Mark interpretation as interpretation.</td></tr>
+<tr><td>Informality</td><td>Low–medium</td><td>First person ("I read the notification so you don't have to" is fine). No slang, no emoji in LinkedIn text, no exclamation marks.</td></tr>
+<tr><td>Opinion strength</td><td>Clear, bounded</td><td>"I'd price October orders as if RoDTEP is zero" is good. "The government is destroying exporters" is off-brand.</td></tr>
+<tr><td>Sentence style</td><td>Short declaratives; one idea per line; concrete nouns</td><td>Name the notification, the HS code, the port, the date. Avoid abstractions like "the landscape", "the ecosystem".</td></tr>
+<tr><td>Numbers</td><td>Precise and sourced</td><td>Always give unit, period and source ("₹10,000 crore, FY27 allocation, Union Budget"). Round only when you say so.</td></tr>
+<tr><td>Politics</td><td>Neutral on parties; candid on policy mechanics</td><td>Critique the design of a rule, never a party or a person.</td></tr>
+</tbody></table></div>
+<h3>The uncertainty ladder</h3>
+<p>Uncertainty is stated with fixed words, so readers learn the scale:</p>
+<ul>
+<li><strong>Confirmed</strong> — in a notified document.</li>
+<li><strong>Reported</strong> — credible media, not yet notified.</li>
+<li><strong>Likely</strong> — our read, most evidence points one way.</li>
+<li><strong>Possible</strong> — a scenario worth preparing for.</li>
+<li><strong>Unclear</strong> — we don't know, and here is what would tell us.</li>
+</ul>
+<h3>Headlines and hooks</h3>
+<p><strong>Hook philosophy:</strong> the first line states a specific consequence, not a feeling. Specificity is the hook.</p>
+<div class="voice">
+<div class="no"><span class="lbl">Not this</span>🚨 BIG UPDATE for exporters!! Nobody is talking about this…</div>
+<div class="yes"><span class="lbl">This</span>From 1 October, your bank gives you 15 months to realise an export, not 9. Here's what else changes in the new FEMA rules.</div>
+<div class="no"><span class="lbl">Not this</span>India–UK FTA is a game-changer for Indian exporters!</div>
+<div class="yes"><span class="lbl">This</span>UK duty on Indian knitwear is now zero. Against Bangladesh, that changes nothing. Here's where it does matter.</div>
+<div class="no"><span class="lbl">Not this</span>Hormuz crisis: exporters face huge losses 😟</div>
+<div class="yes"><span class="lbl">This</span>If you're quoting CIF to a Gulf buyer this month, you're underwriting war-risk you can't price. Switch the Incoterm, not the buyer.</div>
+</div>
+<p class="receipt">These examples illustrate voice only. Each needs the verification noted in the 30-day plan before it runs as real copy.</p>
+<h3>Post anatomy (intelligence posts)</h3>
+<ol>
+<li><strong>Consequence line</strong> — who is affected, and how.</li>
+<li><strong>What changed</strong> — two or three lines of fact.</li>
+<li><strong>What it means</strong> — interpretation, labelled as such.</li>
+<li><strong>Who should care</strong> — HS codes, markets, clusters.</li>
+<li><strong>What to do this week</strong> — one to three actions.</li>
+<li><strong>What we're watching</strong> — the next trigger, with a date if possible.</li>
+<li><strong>Source line</strong> — document, number, date.</li>
+</ol>
+<h3>Vocabulary</h3>
+<div class="cols">
+<div class="cell"><h4>Use</h4><p>notified · in force · effective from · landed cost · realisation · rules of origin · margin of preference · exposure · HS line · buyer ask · window · watch for · the fine print says</p></div>
+<div class="cell"><h4>Avoid</h4><p>game-changer · huge opportunity · must-know · hidden secret · nobody is talking about · guaranteed · passive income · explode · skyrocket · "Let that sink in" · "Agree?" · 🚀💰🔥</p></div>
+<div class="cell"><h4>Never, without a source</h4><p>tariff rates · scheme rates or deadlines · trade values · quotes · company names in any negative context · "government is planning…"</p></div>
+</div>
+<h3>Corrections policy (part of the voice)</h3>
+<p>Mistakes get corrected in public: edit the post, add a first comment starting "Correction:", and log it in the Ledger. An intelligence brand that corrects itself visibly is <em>more</em> trusted, not less.</p>
+</section>
+
+<section id="p6" class="part" aria-labelledby="p6-h">
+<div class="part-label">Part 06</div>
+<h2 id="p6-h">Audience segmentation and journeys</h2>
+<div class="tbl xwide"><table>
+<thead><tr><th>Priority</th><th>Segment</th><th>What they need</th><th>What they'd pay for</th><th>First content that works</th><th>Channel</th></tr></thead>
+<tbody>
+<tr><td class="num">1</td><td><strong>Existing MSME exporters</strong><span class="sub">owner, director, export manager; ₹5–250 cr turnover</span></td><td>Early warning; margin protection; compliance certainty</td><td>Advisory; Incentive Desk (they generate scrips); LEAP for their team</td><td>Countdown, Fine Print, Second Order</td><td>LinkedIn, WhatsApp, newsletter</td></tr>
+<tr><td class="num">2</td><td><strong>Export-ready domestic businesses</strong><span class="sub">manufacturers and traders with a product, no exports yet</span></td><td>A safe, ordered path to the first shipment</td><td>LEAP (core buyer); first-shipment advisory</td><td>Headline vs Reality, news-pegged explainers, Market Door</td><td>LinkedIn, Instagram, webinars</td></tr>
+<tr><td class="num">3</td><td><strong>Importers</strong> (BCD payers)</td><td>Lower duty cost; FTA and duty changes</td><td>Scrip purchase; duty and FTA advisory</td><td>Duty-change Fine Print; FTA rules-of-origin posts</td><td>Direct B2B outreach, LinkedIn (targeted), CHA partners</td></tr>
+<tr><td class="num">4</td><td><strong>Serious aspiring exporters</strong><span class="sub">professionals, second-generation family members, entrepreneurs with capital and a plan</span></td><td>Real understanding, protection from scams</td><td>LEAP Foundation (filtered)</td><td>Instagram "reality check" and scam-awareness series</td><td>Instagram, YouTube, webinars</td></tr>
+<tr><td class="num">5</td><td><strong>Colleges and students</strong></td><td>Career awareness; practical trade literacy</td><td>Institutions pay (campus LEAP); students rarely do</td><td>Campus sessions; the Desk as a live teaching resource</td><td>B2B to colleges; Instagram</td></tr>
+<tr><td>Multiplier</td><td><strong>CHAs, freight forwarders, CAs, trade-finance bankers, EPC and association staff</strong></td><td>Something useful to forward to their clients</td><td>Referral partnerships</td><td>Countdowns and compliance checklists they can share</td><td>LinkedIn, WhatsApp</td></tr>
+<tr><td>Deprioritise</td><td>"Side-income / zero-investment" seekers; general business-motivation audiences</td><td>Shortcuts</td><td>Low willingness to pay; high refund and complaint risk</td><td>—</td><td>Filter out</td></tr>
+</tbody></table></div>
+<div class="stamp"><span class="lbl">Challenge · should LEAP target a narrower audience?</span>
+<p><strong>Yes.</strong> The mass beginner market already has scaled incumbents with hundreds of thousands of followers, large student counts and aggressive pricing. Competing there means adopting their register, which contradicts the intelligence brand.</p>
+<p>The underserved buyer is the <strong>owner of an existing business who has a product and wants the first export done right</strong>. They will pay more, finish the course, become exporters, and later need advisory and incentive services. They also generate scrips.</p>
+<p>LEAP's promise should be concrete: <em>"In eight weeks, go from 'my product could sell abroad' to a costed, compliant, buyer-ready export plan, with your first qualified buyer conversations under way."</em> No income claims, no guaranteed buyers.</p>
+<p>Keep "Earn" in the name, but define it as <em>earning your first export order properly</em>, never as an income promise.</p></div>
+<h3>Journeys, not one funnel</h3>
+<p>The brief proposes one path: Research → Content → Attention → Trust → Community → LEAP → Consultation → Scrip services. <span class="tag t-op">Opinion</span> <strong>That path is not logical for most people.</strong> Scrip <em>sellers</em> are existing exporters. They will never come through a beginner course. Scrip <em>buyers</em> are importers, a different audience again. And LEAP buyers are mostly not advisory clients. Four journeys share one trust core instead:</p>
+<div class="lanes">
+<div class="lane"><div class="who">Exporter journey<small>MSME exporters, experienced exporters</small></div><div class="steps"><span>Desk post</span><i>→</i><span>Follow + WhatsApp channel</span><i>→</i><span>Saturday Brief</span><i>→</i><span>"Ask the Desk" / 20-min diagnostic</span><i>→</i><span class="money">Advisory</span><i>/</i><span class="money">Incentive Desk</span><i>→</i><span class="money">LEAP for teams</span></div></div>
+<div class="lane"><div class="who">Builder journey<small>export-ready businesses, entrepreneurs, serious aspirants</small></div><div class="steps"><span>Instagram explainer / Headline vs Reality</span><i>→</i><span>Free "Export Reality Check" live session</span><i>→</i><span>Readiness checklist</span><i>→</i><span class="money">LEAP cohort</span><i>→</i><span>First shipment</span><i>→</i><span>Joins exporter journey (and generates scrips)</span></div></div>
+<div class="lane"><div class="who">Importer journey<small>BCD payers</small></div><div class="steps"><span>Direct outreach + CHA referral</span><i>→</i><span>Duty and FTA posts (proof of competence)</span><i>→</i><span class="money">Scrip purchase</span><i>→</i><span class="money">Duty / FTA advisory</span></div></div>
+<div class="lane"><div class="who">Campus journey<small>colleges, students</small></div><div class="steps"><span>Institution partnership</span><i>→</i><span class="money">Campus LEAP</span><i>→</i><span>Students follow the Desk</span><i>→</i><span>Future employees and exporters (long horizon)</span></div></div>
+</div>
+<p><span class="tag t-int">Interpretation</span> The loop worth noticing: builder-journey graduates who start exporting become exporter-journey clients and scrip sellers. That makes LEAP a long-term supply channel for the other businesses, which is the real reason to keep it serious.</p>
+<h3>Journey notes per audience named in the brief</h3>
+<div class="tbl wide"><table>
+<thead><tr><th>Audience</th><th>Entry point</th><th>What builds trust</th><th>Natural next step</th></tr></thead>
+<tbody>
+<tr><td>Complete beginners</td><td>Instagram reality-check and scam-awareness reels</td><td>Honesty about effort and risk</td><td>Free live session → LEAP Foundation only if they have a product or trade</td></tr>
+<tr><td>Existing exporters</td><td>A Countdown or Fine Print post that affects their shipments</td><td>Being right early, with the source</td><td>WhatsApp channel → diagnostic → advisory or incentive work</td></tr>
+<tr><td>MSMEs considering export</td><td>Headline vs Reality on an FTA covering their product</td><td>Specific numbers for <em>their</em> HS line</td><td>Readiness checklist → LEAP</td></tr>
+<tr><td>Experienced exporters</td><td>Second Order and Draft Watch</td><td>Things they didn't already know</td><td>Peer discussion; advisory on new markets; they amplify the Desk</td></tr>
+<tr><td>Importers interested in scrips</td><td>Direct outreach, CHA introduction</td><td>Clean, fast, documented transfers; due-diligence help</td><td>Repeat purchases; FTA duty planning</td></tr>
+<tr><td>Students</td><td>Campus programme, Instagram</td><td>Clarity; career relevance</td><td>Follow; internships; long-term brand</td></tr>
+<tr><td>Entrepreneurs</td><td>Market Door posts; Instagram</td><td>Data over hype</td><td>LEAP → first-shipment support</td></tr>
+<tr><td>College audiences (institutions)</td><td>Offline programme track record</td><td>Structured curriculum; real-time case material</td><td>Annual campus contracts</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="p7" class="part" aria-labelledby="p7-h">
+<div class="part-label">Part 07</div>
+<h2 id="p7-h">LinkedIn strategy</h2>
+<p><strong>Role:</strong> the reputation engine. LinkedIn is where exporters, importers, bankers, CHAs, EPC officials and journalists decide who is credible.</p>
+<div class="tbl wide"><table>
+<thead><tr><th>Decision</th><th>Recommendation</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Primary audience</td><td>MSME exporters and export managers; secondary: importers, multipliers, export-ready owners</td><td>They buy advisory and incentive services and they amplify</td></tr>
+<tr><td>Primary account</td><td>Founder's profile. Company page reposts and runs the newsletter, charts and the Ledger.</td><td>Reach and accountability (Part 4)</td></tr>
+<tr><td>Frequency</td><td><strong>Five posts a week (Mon–Fri) + the Saturday <em>Maverick Brief</em></strong> newsletter. Sunday off. Daily <em>research</em> regardless.</td><td>B2B weekend reach is low. A quality floor protects the brand.</td></tr>
+<tr><td>Format mix</td><td>~40% text + one chart or annotated document image; ~30% document/PDF carousels (5–9 pages); ~15% short founder video (60–120 s); ~15% text-only (Countdowns, Ask the Desk)</td><td>Documents and native media hold attention without an outbound link; charts carry data</td></tr>
+<tr><td>Length</td><td>Signal posts 150–300 words; carousels up to 9 slides; newsletter 800–1,200 words</td><td>Long enough for fact → meaning → action</td></tr>
+<tr><td>Links</td><td>Source link in the <em>first comment</em> (documents) or on the last carousel slide</td><td>Keeps the post native while still showing receipts</td></tr>
+<tr><td>Commercial posts</td><td>At most 1 in 10. Always useful on its own. Disclosed if scrip-related.</td><td>Protects the Desk's credibility</td></tr>
+<tr><td>Comments</td><td>The founder writes 3–5 substantive comments a day on others' trade posts, adding the fine print they missed</td><td>Comments are content: a low-cost way to be discovered by the right people</td></tr>
+</tbody></table></div>
+<p class="receipt">Platform notes (dwell time and saves as signals, personal profiles outperforming pages, outbound links under-distributed) come from third-party 2026 analyses, not LinkedIn documentation. Treat them as hypotheses and test them against your own analytics in the first 60 days.</p>
+<h3>How the system produces something interesting every day</h3>
+<p>Weekdays are <strong>not</strong> fixed themes. Each day's lead post is simply the <strong>highest-scoring story</strong> from the scoring model (Part 12). A light default rhythm follows real data calendars, so the Desk always has a fallback:</p>
+<div class="tbl"><table>
+<thead><tr><th>Day</th><th>Default slot (used only if nothing scores higher)</th><th>Why that day</th></tr></thead>
+<tbody>
+<tr><td>Mon</td><td><em>Countdown</em>: the week's dates that change exporters' economics</td><td>Planning mindset at week start</td></tr>
+<tr><td>Tue–Wed</td><td>Best <em>Fine Print</em> or <em>Second Order</em> story</td><td>Monday–Tuesday notifications, and overnight US and EU publications, have landed</td></tr>
+<tr><td>Thu</td><td><em>Freight Pulse</em> (weekly container-rate read for Indian lanes) or <em>Draft Watch</em></td><td>Drewry's World Container Index publishes on Thursdays</td></tr>
+<tr><td>Fri</td><td><em>Headline vs Reality</em> or <em>Ask the Desk</em></td><td>Reflective; good for discussion</td></tr>
+<tr><td>Sat</td><td><em>The Maverick Brief</em> (newsletter)</td><td>Owners read longer pieces at weekends</td></tr>
+</tbody></table></div>
+<p>A backlog of 10–15 pre-researched evergreen-but-timely pieces (news-pegged explainers, Market Doors) means a quiet news day never forces filler.</p>
+<h3>Educational content versus intelligence content</h3>
+<div class="cols">
+<div class="cell"><h4>Intelligence</h4><p>Triggered by a change. Time-bound. Answers "what changed, and what should I do?" Carries a source line and a date.</p></div>
+<div class="cell"><h4>Education (news-pegged)</h4><p>Triggered by a change, but explains the underlying mechanism: why BCD is the only duty a scrip can pay; how rules of origin work. It keeps its value for months and later feeds LEAP modules.</p></div>
+</div>
+<h3>Introducing LEAP without damaging credibility</h3>
+<ol>
+<li><strong>Weeks 1–6: no LEAP selling.</strong> Build the Desk's record first.</li>
+<li><strong>Weeks 4–8: show the curriculum being built from Desk material</strong> ("this week's FEMA change becomes Module 6, Lesson 2"). Open a waitlist from the Saturday Brief only.</li>
+<li><strong>Week 8+: launch the first online cohort</strong> with a live session. Sell with specifics: the syllabus, the eight-week outcome, who it is <em>not</em> for.</li>
+<li><strong>Offline reputation transfer:</strong> short testimonials from past programme participants on camera (with consent); photos from real sessions; named partner institutions. No invented numbers.</li>
+</ol>
+</section>
+
+<section id="p8" class="part" aria-labelledby="p8-h">
+<div class="part-label">Part 08</div>
+<h2 id="p8-h">Instagram strategy</h2>
+<p><strong>Role:</strong> Instagram is the <em>explanation and trust</em> channel. It turns trade mechanics into something a first-generation business owner understands in a minute, in Tamil and English. It is LEAP's lead source. It is not the reputation engine, and it should never be a LinkedIn copy.</p>
+<div class="stamp"><span class="lbl">Challenge · should Instagram matter more than LinkedIn?</span>
+<p><strong>For LEAP lead volume, possibly yes. For the brand and for high-value revenue, no.</strong> Advisory and incentive clients decide on LinkedIn, WhatsApp and referrals. Run Instagram at a lower cadence (3–4 posts a week) with a separate content plan, and judge it on LEAP pipeline metrics, not on follower count.</p></div>
+<div class="tbl wide"><table>
+<thead><tr><th>Decision</th><th>Recommendation</th></tr></thead>
+<tbody>
+<tr><td>Formats</td><td>About 60% Reels (45–75 s, founder on camera, captions burned in); about 40% carousels (7–10 slides, built to be saved). Reels bring discovery; carousels convert followers.</td></tr>
+<tr><td>Language</td><td>Primarily Tamil voice-over with English on-screen text, plus English-only editions of the best pieces. Regional-language intelligence is close to empty territory.</td></tr>
+<tr><td>Founder on video</td><td>Yes. Trust in export education is trust in a person, and the audience is on guard against scams. A real face at a real desk works better than stock footage.</td></tr>
+<tr><td>Visual identity</td><td>"The document on the desk". Recurring overhead shots of the actual paper (shipping bill, BL, LC, a notification) with a hand pointing to the line that matters. Brand crimson for the highlight, charcoal for text, one condensed sans. No stock cityscapes, no money imagery, no container-ship clichés.</td></tr>
+<tr><td>Lead generation</td><td>Comment a keyword → automated DM with a free resource (e.g. <em>Export Readiness Checklist</em>) → WhatsApp → invitation to a free live "Export Reality Check" → LEAP</td></tr>
+<tr><td>Signals to optimise</td><td>Sends (DM shares), saves, watch-through. Third-party 2026 reporting says Instagram leadership has confirmed watch time, sends-per-reach and likes-per-reach as major signals, and that original content is favoured over reposts. Verify against your own Insights.</td></tr>
+</tbody></table></div>
+<h3>Instagram series</h3>
+<div class="cols">
+<div class="cell"><h4>Paperwork, Decoded</h4><p>One export document a week: what it is, the one line people get wrong, and what that line costs them.</p></div>
+<div class="cell"><h4>Is This Real?</h4><p>Anatomy of export scams: fake LCs, fake "buyer" advance-fee requests, fake agents. Protective, highly shareable, builds trust with the most wary segment.</p></div>
+<div class="cell"><h4>60-Second Desk</h4><p>The week's best LinkedIn intelligence story, rebuilt for a beginner in one visual metaphor (a map, an invoice, a shipping route).</p></div>
+<div class="cell"><h4>One Word</h4><p>A trade term through a real current example (e.g. "war-risk surcharge" through the Hormuz situation).</p></div>
+<div class="cell"><h4>Cluster Stories</h4><p>Short documentary visits to exporting units in Tamil Nadu clusters. Only with consent, never implying income outcomes.</p></div>
+<div class="cell"><h4>Reality Check</h4><p>Myths about exporting answered honestly, including "who this isn't for".</p></div>
+</div>
+<h3>What not to post on Instagram</h3>
+<ul>
+<li>Screenshots of notifications or dense infographics. They don't read on a phone.</li>
+<li>Scrip rates or "sell your scrip" promotions. Use WhatsApp Business and direct outreach.</li>
+<li>Income claims, earnings screenshots, "₹X lakh a month" hooks. Beyond the trust damage, these create advertising-policy risk.</li>
+<li>"Top 10 products to export" listicles.</li>
+<li>LinkedIn text pasted into a caption.</li>
+<li>Geopolitical hot takes. Keep conflict topics to their practical shipping and payment consequences.</li>
+</ul>
+</section>
+
+<section id="p9" class="part" aria-labelledby="p9-h">
+<div class="part-label">Part 09</div>
+<h2 id="p9-h">Content architecture</h2>
+<p>The minimum set that achieves the brand objective is <strong>four categories</strong>:</p>
+<ul>
+<li><strong>Signal</strong> — the reputation engine.</li>
+<li><strong>Explain</strong> — turns attention into understanding.</li>
+<li><strong>Proof</strong> — turns understanding into trust.</li>
+<li><strong>Offer</strong> — turns trust into revenue, sparingly.</li>
+</ul>
+<p>Inside them sit recurring franchises. Readers learn to recognise them by name.</p>
+<div class="tbl xwide"><table>
+<thead><tr><th>Franchise</th><th>Category</th><th>Purpose</th><th>Example topic (from current research)</th><th>Format</th><th>Frequency</th><th>Funnel role</th><th>Main sources</th><th>Effort</th></tr></thead>
+<tbody>
+<tr><td><strong>The Fine Print</strong></td><td>Signal</td><td>One primary document; the line that matters</td><td>FEMA (Export and Import of Goods and Services) Regulations 2026 from 1 Oct: realisation 15 months (18 for INR invoices), unified EDF, set-off</td><td>Text + annotated document image</td><td>1–2/wk</td><td>Authority; exporter journey</td><td>DGFT, CBIC, RBI, Gazette</td><td>Medium</td></tr>
+<tr><td><strong>Second Order</strong></td><td>Signal</td><td>Global event → which Indian products, markets and clusters win or lose</td><td>US final CVD on oleoresin paprika from India (Federal Register, 21 Aug 2026) → what US CVD practice on RoDTEP means for spice-extract exporters</td><td>Carousel with an exposure chart</td><td>1–2/wk</td><td>"Saw it first" moments</td><td>Federal Register, EU OJ, trade data</td><td>High</td></tr>
+<tr><td><strong>Countdown</strong></td><td>Signal</td><td>Dates that change exporters' economics, with actions</td><td>RoDTEP/RoSCTL extension ends 30 Sep; FEMA 2026 on 1 Oct; EUDR 30 Dec; UK CBAM 1 Jan 2027</td><td>Text list; recurring template</td><td>Weekly (Mon)</td><td>Habit; shareable by multipliers</td><td>All primary sources</td><td>Low</td></tr>
+<tr><td><strong>Headline vs Reality</strong></td><td>Signal</td><td>Test an official or media claim against the fine print</td><td>"99% of lines duty-free" in UK CETA: where Indian products actually gain versus competitors that already had preferences</td><td>Text + comparison table</td><td>Weekly</td><td>Differentiation; debate</td><td>FTA texts, tariff schedules</td><td>Medium–high</td></tr>
+<tr><td><strong>Draft Watch</strong></td><td>Signal</td><td>Foreign rules still in draft (WTO ePing SPS/TBT) that buyers will ask about months later</td><td>A new pesticide residue limit or labelling rule in a key market, while the comment window is still open</td><td>Text + one visual</td><td>Fortnightly</td><td>True early warning</td><td>ePing daily alerts</td><td>Medium</td></tr>
+<tr><td><strong>Rejection Watch</strong></td><td>Signal</td><td>What importing countries flagged or refused from India, and why</td><td>Monthly count and pattern of EU RASFF notifications and US FDA refusals for Indian products</td><td>Carousel / chart</td><td>Monthly</td><td>Practical; agri and food audiences</td><td>RASFF portal, FDA import refusals</td><td>Medium</td></tr>
+<tr><td><strong>Freight Pulse</strong></td><td>Signal</td><td>The weekly logistics read for Indian lanes</td><td>War-risk and routing costs on Gulf-bound cargo during the Hormuz closure; Incoterm choices</td><td>Chart + 100 words</td><td>Weekly (Thu)</td><td>Habit; forwarders reshare</td><td>Drewry WCI, carrier advisories, IMF PortWatch</td><td>Low once templated</td></tr>
+<tr><td><strong>The Number</strong></td><td>Signal</td><td>One trade statistic, interpreted</td><td>Monthly quick estimates of India's merchandise trade (mid-month release)</td><td>Single chart</td><td>Monthly</td><td>Authority</td><td>Commerce ministry, TradeStat</td><td>Low</td></tr>
+<tr><td><strong>Market Door</strong></td><td>Explain</td><td>One HS code × one market: demand, duty, competitors, requirements</td><td>A UK CETA line where Indian goods now enter duty-free, with import data and the rules of origin</td><td>Document carousel</td><td>Fortnightly</td><td>Builder journey; LEAP material</td><td>ITC Trade Map, UN Comtrade, tariff schedules</td><td>High</td></tr>
+<tr><td><strong>News-pegged explainer</strong></td><td>Explain</td><td>The mechanism behind today's story</td><td>Why a RoDTEP scrip can only pay Basic Customs Duty, and what that means for importers</td><td>Carousel / Reel</td><td>Weekly</td><td>Education; LEAP modules</td><td>Scheme and customs texts</td><td>Medium</td></tr>
+<tr><td><strong>Ask the Desk</strong></td><td>Explain</td><td>Real questions from clients, students and comments (anonymised)</td><td>"If RoDTEP lapses, what happens to scrips I already hold?"</td><td>Text Q&amp;A / short video</td><td>Weekly</td><td>Conversation; lead signals</td><td>Inbox, consultations</td><td>Low</td></tr>
+<tr><td><strong>The Calls Ledger</strong></td><td>Proof</td><td>Grade our own past flags in public</td><td>"In September we flagged three things. Here's what happened."</td><td>Table image</td><td>Monthly</td><td>Trust; unique</td><td>Our database</td><td>Low</td></tr>
+<tr><td><strong>Case Notes</strong></td><td>Proof</td><td>Anonymised lessons from real advisory work</td><td>The proforma line that almost lost an MSME its first EU order</td><td>Text</td><td>Fortnightly</td><td>Advisory demand</td><td>Consulting files (with consent)</td><td>Low</td></tr>
+<tr><td><strong>Offers</strong></td><td>Offer</td><td>LEAP cohorts, advisory slots, Incentive Desk</td><td>LEAP cohort announcement with syllabus</td><td>Any</td><td>≤1 in 10 posts</td><td>Conversion</td><td>—</td><td>Low</td></tr>
+</tbody></table></div>
+<h3>Removed on purpose</h3>
+<ul>
+<li><strong>Motivational and founder-journey posts</strong> — except a rare, genuinely instructive story.</li>
+<li><strong>Festival greetings</strong> as standalone posts.</li>
+<li><strong>"Export product ideas" listicles</strong> — replaced by Market Door.</li>
+<li><strong>News round-ups without an angle</strong> — the Saturday Brief is the only round-up, and every item in it carries a "so what".</li>
+<li><strong>Generic tips</strong> ("5 tips to find buyers") — they commoditise the brand.</li>
+</ul>
+<h3>The Angle Engine: eight questions that turn news into a Maverick Minds post</h3>
+<ol>
+<li><strong>Who pays and who gains?</strong> Follow the money through the value chain.</li>
+<li><strong>Which HS lines?</strong> Name them. If you can't, the story isn't ready.</li>
+<li><strong>Which Indian exposure?</strong> The value of India's exports of those lines to that market. Source it.</li>
+<li><strong>Which competitor country moves?</strong> Relative change matters more than absolute change.</li>
+<li><strong>Which cluster feels it first?</strong> Tirupur, Karur, Coimbatore, Ambur, Tuticorin…</li>
+<li><strong>What's the deadline or window?</strong> When does it take effect, and when does it bite?</li>
+<li><strong>What does the headline get wrong or leave out?</strong></li>
+<li><strong>What should an exporter do this week?</strong> If there's no action, it's a watchlist item, not a post.</li>
+</ol>
+</section>
+
+<section id="p10" class="part" aria-labelledby="p10-h">
+<div class="part-label">Part 10</div>
+<h2 id="p10-h">The export intelligence system</h2>
+<h3>Where "seeing around corners" actually comes from</h3>
+<p>Trade developments pass through a predictable lifecycle. Most export content appears at the last two stages. The Desk works at the first three and adds consequences at the fourth.</p>
+<div class="tbl wide"><table>
+<thead><tr><th>Stage</th><th>What exists</th><th>Typical source</th><th>Who covers it today</th><th>Desk role</th></tr></thead>
+<tbody>
+<tr><td>1. Draft</td><td>Proposed rule, consultation, investigation initiation</td><td>WTO ePing, Federal Register notices, EU "have your say", DGTR initiations, foreign trade-remedy initiations</td><td>Almost no one in Indian export content</td><td><strong>Draft Watch</strong> — early warning</td></tr>
+<tr><td>2. Notified</td><td>Official instrument published</td><td>DGFT notifications and trade notices, CBIC notifications, RBI, Gazette, EU OJ</td><td>Tax portals (verbatim)</td><td><strong>Fine Print</strong> — meaning and action</td></tr>
+<tr><td>3. Effective</td><td>Rule starts to apply</td><td>The same documents, dated</td><td>Few</td><td><strong>Countdown</strong></td></tr>
+<tr><td>4. Enforced</td><td>Rejections, duties collected, cases decided</td><td>RASFF, FDA refusals, CVD/AD final determinations, court orders</td><td>Specialists only</td><td><strong>Rejection Watch</strong>, <strong>Second Order</strong></td></tr>
+<tr><td>5. Reported</td><td>News coverage</td><td>ET, BS, Mint, Reuters</td><td>Everyone</td><td>Confirmation only</td></tr>
+<tr><td>6. Commented</td><td>LinkedIn takes, YouTube explainers</td><td>Everyone</td><td>Saturated</td><td><strong>Headline vs Reality</strong> when the takes are wrong</td></tr>
+</tbody></table></div>
+
+<h3>The source universe</h3>
+<p>Tiered by value. <strong>P</strong> = primary, <strong>S</strong> = secondary. <strong>Early</strong> = gives a lead time; <strong>Confirm</strong> = verifies.</p>
+<div class="tbl xwide"><table>
+<thead><tr><th>Source</th><th>P/S</th><th>Signal</th><th>Cadence</th><th>Method</th><th>Why it's worth it</th></tr></thead>
+<tbody>
+<tr><td colspan="6"><strong>A · Indian regulatory (core, daily)</strong></td></tr>
+<tr><td>DGFT: notifications, public notices, trade notices, circulars</td><td>P</td><td>Early/Confirm</td><td>Daily, twice (DGFT often uploads late in the day)</td><td>Page-change watcher</td><td>Scheme rates and extensions, FTP changes, procedure</td></tr>
+<tr><td>CBIC: customs tariff and non-tariff notifications, ADD/CVD/safeguard, circulars</td><td>P</td><td>Confirm</td><td>Daily</td><td>Page watcher / RSS</td><td>Duty changes (scrip demand), input-cost duties</td></tr>
+<tr><td>ICEGATE advisories</td><td>P</td><td>Early</td><td>Weekly</td><td>Page watcher</td><td>Operational changes (e-scrip, filing)</td></tr>
+<tr><td>RBI: FEMA notifications, master directions</td><td>P</td><td>Confirm</td><td>Daily</td><td>RSS</td><td>Realisation, EDPMS, trade finance</td></tr>
+<tr><td>DGTR: anti-dumping initiations and findings</td><td>P</td><td>Early</td><td>Weekly</td><td>Page watcher</td><td>Input costs for Indian manufacturers</td></tr>
+<tr><td>PIB (Commerce, Finance, Textiles, MSME, Agriculture)</td><td>P</td><td>Early</td><td>Daily</td><td>RSS</td><td>Cabinet decisions, scheme launches</td></tr>
+<tr><td>Commodity boards and EPCs (APEDA, MPEDA, Spices Board, Tea and Coffee Boards, AEPC, EEPC, Texprocil, CLE, Pharmexcil…)</td><td>P/S</td><td>Early</td><td>Weekly</td><td>Email subscriptions → inbox parser</td><td>Sector circulars, market advisories</td></tr>
+<tr><td colspan="6"><strong>B · Foreign regulatory (the edge, daily or weekly)</strong></td></tr>
+<tr><td>WTO ePing (SPS/TBT notifications)</td><td>P</td><td><strong>Early</strong></td><td>Daily email alerts by HS and market</td><td>Email alerts → parser</td><td>Draft rules with comment windows. Best early-warning source available, and free.</td></tr>
+<tr><td>US Federal Register (USTR, Commerce AD/CVD, CBP, FDA)</td><td>P</td><td>Early/Confirm</td><td>Daily</td><td>API search for "India"</td><td>Tariffs, CVD cases (including RoDTEP findings), import rules</td></tr>
+<tr><td>EU Official Journal, DG TRADE trade defence, Access2Markets</td><td>P</td><td>Early/Confirm</td><td>Daily/weekly</td><td>RSS / page watch</td><td>CBAM, EUDR, AD cases, FTA implementation</td></tr>
+<tr><td>EU RASFF, US FDA import refusals and alerts</td><td>P</td><td>Enforced</td><td>Weekly/monthly</td><td>Portal queries</td><td>What gets Indian food and agri shipments rejected</td></tr>
+<tr><td>UK trade tariff, Trade Remedies Authority, UK CBAM guidance</td><td>P</td><td>Confirm</td><td>Weekly</td><td>Page watch</td><td>CETA implementation</td></tr>
+<tr><td>GCC, UAE and Saudi regulators; China GACC; trade-remedy agencies in Canada, Australia, Turkey, Brazil</td><td>P</td><td>Early</td><td>Weekly</td><td>Page watch + manual</td><td>Frequent sources of action against Indian goods</td></tr>
+<tr><td colspan="6"><strong>C · Data (weekly, monthly)</strong></td></tr>
+<tr><td>Commerce ministry monthly quick estimates; TradeStat / DGCI&amp;S</td><td>P</td><td>Confirm</td><td>Monthly (mid-month)</td><td>Download</td><td>India's exposure by HS and country</td></tr>
+<tr><td>UN Comtrade, ITC Trade Map / Market Access Map / Export Potential Map</td><td>P/S</td><td>Context</td><td>On demand</td><td>API / manual</td><td>Market sizing, competitor shares, tariffs</td></tr>
+<tr><td>Global Trade Alert; WTO trade monitoring</td><td>S</td><td>Early</td><td>Weekly</td><td>Manual</td><td>Global interventions database</td></tr>
+<tr><td>IMF PortWatch</td><td>P</td><td>Early</td><td>Weekly</td><td>Manual</td><td>Chokepoint transits (Hormuz, Red Sea)</td></tr>
+<tr><td colspan="6"><strong>D · Logistics</strong></td></tr>
+<tr><td>Drewry WCI (Thu), Freightos FBX, SCFI (Fri)</td><td>S</td><td>Early</td><td>Weekly</td><td>Manual / feeds</td><td>Rate direction on Indian lanes</td></tr>
+<tr><td>Carrier advisories (surcharges, war-risk, routing); Indian port authorities</td><td>P</td><td>Early</td><td>Daily in disruption, else weekly</td><td>Email / page watch</td><td>Real cost changes before they hit invoices</td></tr>
+<tr><td colspan="6"><strong>E · News and analysis (confirmation, context)</strong></td></tr>
+<tr><td>Business Standard, ET, Mint, FE, BusinessLine, Reuters, Fibre2Fashion</td><td>S</td><td>Confirm</td><td>Daily</td><td>Google News RSS queries</td><td>What's "reported"; saturation check</td></tr>
+<tr><td>GTRI, ICRIER, RIS, CSEP, ORF; law-firm alerts</td><td>S</td><td>Context</td><td>Weekly</td><td>RSS / email</td><td>Quote, extend, don't duplicate</td></tr>
+<tr><td colspan="6"><strong>F · Proprietary (the moat)</strong></td></tr>
+<tr><td>Advisory conversations, Incentive Desk activity, LEAP questions, CHA and forwarder network, association WhatsApp groups</td><td>P</td><td><strong>Early</strong></td><td>Continuous</td><td>A 60-second "field note" form</td><td>Signals nobody else has: what buyers are asking, where shipments stall. Use only anonymised, with consent; never publish client data or deal terms.</td></tr>
+</tbody></table></div>
+<h3>Noise (monitor only to measure saturation)</h3>
+<p>Unverified WhatsApp forwards · "BIG UPDATE" LinkedIn reposts · SEO blogs (leads only, never sources) · YouTube news recaps · "export leads" pages · Telegram tip channels · AI-generated trade blogs · stock-market commentary on exporter shares.</p>
+
+<h3>The exposure line: required on every Signal post</h3>
+<p>Every Signal post carries one sourced line on how exposed India is. For example: <em>"India exported [value] of HS [code] to [market] in [period] (source: TradeStat / UN Comtrade)."</em> This one habit makes the Desk's posts concrete, and it is the hardest thing for casual commentators to copy.</p>
+<h3>Cluster reference map (starter)</h3>
+<div class="tbl wide"><table>
+<thead><tr><th>Cluster</th><th>Main export products</th><th>HS chapter / heading (indicative)</th><th>Typical sensitivity</th></tr></thead>
+<tbody>
+<tr><td>Tirupur</td><td>Knitted apparel</td><td>Ch. 61</td><td>US tariff tier, UK CETA, RoSCTL, Bangladesh preferences</td></tr>
+<tr><td>Karur</td><td>Home textiles, made-ups</td><td>Ch. 63</td><td>RoSCTL, EU FTA, US tariffs</td></tr>
+<tr><td>Coimbatore</td><td>Pumps, motors, castings, engineering</td><td>8413, 8501, Ch. 73</td><td>CBAM (steel content), US Section 232/301, EU FTA</td></tr>
+<tr><td>Erode</td><td>Turmeric, textiles</td><td>0910, Ch. 52/63</td><td>SPS limits, RASFF, FDA</td></tr>
+<tr><td>Namakkal</td><td>Eggs, poultry</td><td>0407</td><td>Gulf demand, SPS rules, Hormuz shipping</td></tr>
+<tr><td>Ambur / Vellore / Ranipet</td><td>Leather, footwear</td><td>Ch. 41, 42, 64</td><td>EUDR (leather proposed for exclusion), UK CETA</td></tr>
+<tr><td>Tuticorin</td><td>Marine products, port-linked trade</td><td>Ch. 03</td><td>US CVD/AD on shrimp, SPS, freight</td></tr>
+<tr><td>Chennai / Hosur</td><td>Auto components, electronics</td><td>8708, Ch. 85</td><td>US tariffs, EU FTA rules of origin</td></tr>
+</tbody></table></div>
+<p class="receipt">HS mappings are indicative starter tags for the database, not tariff classifications. Confirm product-level codes before publishing any exposure figure.</p>
+</section>
+
+<section id="p11" class="part" aria-labelledby="p11-h">
+<div class="part-label">Part 11</div>
+<h2 id="p11-h">Daily research system</h2>
+<p>Every day, the system answers one question: <em>what happened in global trade today that Indian exporters should know, and which of it can we explain better than anyone?</em></p>
+<h3>The day at the Desk (IST)</h3>
+<div class="tbl wide"><table>
+<thead><tr><th>Time</th><th>What happens</th><th>Who</th></tr></thead>
+<tbody>
+<tr><td class="mono">05:30</td><td>Automated collection sweep. Catches overnight US and EU publications (Federal Register, EU OJ), ePing alerts, late-evening DGFT/CBIC uploads, and news feeds.</td><td>Machine</td></tr>
+<tr><td class="mono">06:30</td><td>Dedup, clustering, triage, first-pass scores. The <strong>Desk Sheet</strong> goes out: top 10 candidates, each with a one-line consequence, sources, score and saturation count.</td><td>Machine</td></tr>
+<tr><td class="mono">07:45</td><td>Pick today's lead and one backup (15 minutes). Flag Watchlist items.</td><td>Founder or analyst</td></tr>
+<tr><td class="mono">08:00–09:30</td><td>Verification pass (protocol below); run the Angle Engine; pull the exposure figure; machine draft and claims table produced.</td><td>Analyst + machine</td></tr>
+<tr><td class="mono">09:30–10:30</td><td>Edit the draft into the founder's voice; build the visual from the template; risk-tier check.</td><td>Analyst + designer</td></tr>
+<tr><td class="mono">10:30</td><td>Approval (Part 15)</td><td>Founder</td></tr>
+<tr><td class="mono">11:00–12:30</td><td>Publish. Initial time window to test: late morning IST on weekdays. Founder replies to comments in the first hour.</td><td>Founder</td></tr>
+<tr><td class="mono">16:00</td><td>Second sweep: afternoon DGFT/CBIC uploads, EU morning publications. Update the Watchlist.</td><td>Machine + analyst</td></tr>
+<tr><td class="mono">21:00</td><td>Late check of DGFT/CBIC (evening notifications are common). Anything urgent becomes tomorrow's lead or a same-evening short post.</td><td>Machine alert</td></tr>
+</tbody></table></div>
+<p><strong>Speed tiers:</strong></p>
+<ul>
+<li><strong>T+0</strong> — simple, primary-sourced facts (e.g. an extension notification).</li>
+<li><strong>T+1 (default)</strong> — anything needing interpretation.</li>
+<li><strong>T+3 to T+7</strong> — Second Order, Market Door, Rejection Watch.</li>
+</ul>
+<p>Being a day later than the tax portals is fine. Being wrong is not.</p>
+<h3>Weekly and monthly rhythm</h3>
+<div class="cols">
+<div class="cell"><h4>Weekly</h4><ul><li>Mon: plan the week, update the Countdown calendar</li><li>Thu: Freight Pulse data (Drewry WCI)</li><li>Fri: Brief assembly, Watchlist review, performance review (30 min)</li><li>Sat: Brief published</li></ul></div>
+<div class="cell"><h4>Monthly</h4><ul><li>Mid-month: India trade data → The Number</li><li>RASFF / FDA pull → Rejection Watch</li><li>Calls Ledger grading</li><li>Audience-quality audit (Part 16)</li><li>Scoring-weight review</li></ul></div>
+<div class="cell"><h4>People (minimum viable desk)</h4><ul><li>Founder: 60–90 min a day (pick, voice, approve, comments)</li><li>Research analyst: full-time; commerce, law or economics background; owns verification</li><li>Designer: part-time, working from templates</li><li>Automation: one developer for build, then light maintenance</li></ul></div>
+</div>
+<h3>Verification protocol</h3>
+<ol>
+<li><strong>Policy, tax, customs and scheme claims</strong> need the primary document open, not a summary of it. Record its number, date and URL.</li>
+<li><strong>Numbers</strong> are copied from the source with the exact quoted text stored alongside them. Any derived number (%, growth) is recomputed by the analyst.</li>
+<li><strong>Dates</strong> are checked for "effective from" versus "notified on", and converted to IST where relevant.</li>
+<li><strong>Two-source rule</strong> for anything not in a primary document: two independent credible outlets, never two outlets repeating one wire story.</li>
+<li>Every sentence in the draft is tagged <span class="tag t-fact">Fact</span>, <span class="tag t-int">Interpretation</span>, <span class="tag t-fc">Forecast</span> or <span class="tag t-op">Opinion</span> in the claims table. The published post reflects those tags in its language (the uncertainty ladder).</li>
+<li><strong>Pre-mortem line:</strong> "What would make this post wrong in a week?" If the answer is plausible, soften the claim or wait.</li>
+<li><strong>Legal-interpretation items</strong> (duty liability, eligibility edge cases) get a quick check with a partner CA or customs broker before publishing.</li>
+</ol>
+<h3>Worked example: one development through the system</h3>
+<div class="deadline-box"><span class="lbl">Candidate · FEMA export regime change · 1 Oct 2026</span>
+<p><strong>Raw signal:</strong> law-firm and compliance articles say the FEMA (Export and Import of Goods and Services) Regulations, 2026 (notified 13 Jan 2026) take effect on 1 October 2026. A June 2026 amendment reset the old regime's realisation period from 15 months to 9.</p>
+<p><strong>Verification to-do:</strong></p>
+<ul>
+<li>Open the RBI notification and the Directions.</li>
+<li>Confirm the effective date, the realisation periods (15 months; 18 for INR invoicing) and the transition treatment for shipments made before 1 Oct.</li>
+<li>Check whether banks have issued EDF/EDPMS operating instructions.</li>
+</ul>
+<p><strong>Angle Engine:</strong></p>
+<ul>
+<li><em>Who gains:</em> exporters with long credit terms and INR-invoicing exporters.</li>
+<li><em>Headline gap:</em> "15 months" coverage ignores the June–September reversion to 9 months under the old rules. Shipments made in that window may still sit under the old clock. <span class="tag t-ver">Verify</span></li>
+<li><em>Action:</em> check which regime governs each open shipping bill; review payment terms on October contracts; ask your AD bank for its EDF process.</li>
+</ul>
+<p><strong>Score:</strong> 74 while resting on secondary sources; 87 once the RBI text is verified (see Part 12). <strong>Decision:</strong> lead post on 22 Sep and a Countdown item on 28 Sep.</p></div>
+</section>
+
+<section id="p12" class="part" aria-labelledby="p12-h">
+<div class="part-label">Part 12</div>
+<h2 id="p12-h">Content scoring model</h2>
+<p>The goal is not "find an export news article". It is <strong>find the story Maverick Minds can explain better than anyone today.</strong> So the model rewards angle and action as much as importance. It also penalises saturation.</p>
+<h3>Step 1: Gates (pass all four or discard)</h3>
+<ol>
+<li><strong>G1 Evidence:</strong> at least one primary source, or two independent credible secondaries.</li>
+<li><strong>G2 Indian implication:</strong> an identifiable effect on Indian exporters or importers.</li>
+<li><strong>G3 Not a repeat:</strong> we haven't covered it in the last 14 days, unless there is a genuine new development.</li>
+<li><strong>G4 No unverifiable numbers:</strong> the core claim doesn't depend on a figure we can't source.</li>
+</ol>
+<h3>Step 2: Weighted criteria (each scored 0–5)</h3>
+<div class="tbl wide"><table>
+<thead><tr><th>Criterion</th><th class="num">Weight</th><th>5 means…</th><th>1 means…</th></tr></thead>
+<tbody>
+<tr><td>Exporter impact (money, time or risk at stake)</td><td class="num">20</td><td>Changes price, cash cycle or market access materially</td><td>Cosmetic or symbolic</td></tr>
+<tr><td>Actionability</td><td class="num">15</td><td>A clear "do this before [date]"</td><td>Nothing to do</td></tr>
+<tr><td>Maverick angle strength</td><td class="num">15</td><td>A second-order insight the headline misses</td><td>Only restating the news</td></tr>
+<tr><td>Indian exposure (breadth × specificity)</td><td class="num">12</td><td>Many exporters, or clearly named HS lines and clusters</td><td>Vague, "Indian businesses"</td></tr>
+<tr><td>Under-coverage (inverse saturation)</td><td class="num">12</td><td>0–2 Indian items with this angle in 72 h</td><td>10+ items with the same angle</td></tr>
+<tr><td>Time sensitivity</td><td class="num">10</td><td>A window closes within 30 days</td><td>No time element</td></tr>
+<tr><td>Explainability</td><td class="num">6</td><td>Clear in one post and one visual</td><td>Needs a report</td></tr>
+<tr><td>Audience–business fit</td><td class="num">5</td><td>Core segments (Part 6)</td><td>Outside our audiences</td></tr>
+<tr><td>Evidence quality</td><td class="num">5</td><td>Primary document in hand</td><td>Only secondary</td></tr>
+</tbody></table></div>
+<p><strong>Base score</strong> = Σ (weight × score ÷ 5), out of 100.<br><strong>Final score</strong> = base × confidence multiplier (1.0 primary-verified; 0.85 credible secondary pending verification) − penalties.</p>
+<p><strong>Penalties:</strong></p>
+<ul>
+<li>−5 for geopolitical or political sensitivity.</li>
+<li>−5 to −15 when the story needs speculation to be interesting.</li>
+<li>−10 for a near-repeat.</li>
+</ul>
+<p><strong>Conflict of interest</strong> (scrip-related) is not penalised. It triggers a mandatory disclosure line instead.</p>
+<div class="tbl"><table>
+<thead><tr><th>Final score</th><th>Decision</th></tr></thead>
+<tbody>
+<tr><td class="mono">≥ 75</td><td><strong>Lead Signal</strong>: today's post; consider a carousel</td></tr>
+<tr><td class="mono">60–74</td><td>Secondary post or Saturday Brief item</td></tr>
+<tr><td class="mono">45–59</td><td>Watchlist, with a named trigger for revisiting</td></tr>
+<tr><td class="mono">&lt; 45</td><td>Discard (logged, so we learn what we skip)</td></tr>
+</tbody></table></div>
+<p><strong>Saturation check (automatable):</strong> count Indian news items and LinkedIn posts from the last 72 hours matching the story's entities and angle, from a Google News RSS query plus a manual LinkedIn search.</p>
+<ul>
+<li>0–2 items scores 5.</li>
+<li>3–10 items scores 3.</li>
+<li>More than 10 items scores 1, unless our angle differs, in which case score the angle, not the topic.</li>
+</ul>
+<h3>Worked scoring: five real candidates (as of 14 Sep 2026)</h3>
+<div class="tbl xwide"><table>
+<thead><tr><th>Candidate</th><th class="num">Impact</th><th class="num">Action</th><th class="num">Angle</th><th class="num">Exposure</th><th class="num">Under-cov.</th><th class="num">Time</th><th class="num">Explain</th><th class="num">Fit</th><th class="num">Evid.</th><th class="num">Base</th><th class="num">Final</th><th>Decision</th></tr></thead>
+<tbody>
+<tr><td>RoDTEP/RoSCTL extension ends 30 Sep: price October quotes as if the benefit were zero</td><td class="num">5</td><td class="num">4</td><td class="num">4</td><td class="num">5</td><td class="num">3</td><td class="num">5</td><td class="num">4</td><td class="num">5</td><td class="num">5</td><td class="num">88.0</td><td class="num">88</td><td>Lead · disclosure required</td></tr>
+<tr><td>FEMA 2026 regulations effective 1 Oct</td><td class="num">4</td><td class="num">5</td><td class="num">4</td><td class="num">5</td><td class="num">4</td><td class="num">5</td><td class="num">4</td><td class="num">4</td><td class="num">4</td><td class="num">87.4</td><td class="num">74 → 87</td><td>Lead once RBI text is verified</td></tr>
+<tr><td>US final CVD, oleoresin paprika from India (FR, 21 Aug 2026)</td><td class="num">3</td><td class="num">3</td><td class="num">5</td><td class="num">2</td><td class="num">5</td><td class="num">3</td><td class="num">3</td><td class="num">3</td><td class="num">5</td><td class="num">70.4</td><td class="num">70</td><td>Secondary. Broaden to "RoDTEP in US CVD cases" to lift exposure → ~75.</td></tr>
+<tr><td>Hormuz: Gulf freight costs (restated)</td><td class="num">4</td><td class="num">3</td><td class="num">3</td><td class="num">4</td><td class="num">2</td><td class="num">4</td><td class="num">3</td><td class="num">3</td><td class="num">3</td><td class="num">66.0</td><td class="num">51</td><td>Watchlist as-is</td></tr>
+<tr><td>Same story, with the Incoterm angle ("stop quoting CIF to Gulf buyers")</td><td class="num">4</td><td class="num">5</td><td class="num">5</td><td class="num">4</td><td class="num">2</td><td class="num">4</td><td class="num">3</td><td class="num">3</td><td class="num">3</td><td class="num">78.0</td><td class="num">61</td><td>Secondary post. The angle alone moved it 10 points.</td></tr>
+<tr><td>August trade data release (headline numbers)</td><td class="num">2</td><td class="num">1</td><td class="num">2</td><td class="num">4</td><td class="num">1</td><td class="num">4</td><td class="num">4</td><td class="num">3</td><td class="num">5</td><td class="num">49.8</td><td class="num">50</td><td>Watchlist. Post only if a line-level anomaly appears.</td></tr>
+</tbody></table></div>
+<p class="receipt">Hormuz rows: base × 0.85 (secondary sources) − 5 (sensitivity). FEMA: × 0.85 until verified. The weights are a starting hypothesis; Part 16 describes how they get recalibrated from outcomes.</p>
+</section>
+
+<section id="p13" class="part" aria-labelledby="p13-h">
+<div class="part-label">Part 13</div>
+<h2 id="p13-h">Automation architecture</h2>
+<p><strong>Principle:</strong> automate collection, sorting and first drafts; keep a human on choice, truth and publication. Stages run in this order. The dashed stages are human gates.</p>
+<ol class="pipeline">
+<li><b>Collect</b>Collectors pull feeds, APIs, page-change diffs and parsed email alerts (ePing, EPC circulars). Raw text is stored verbatim with a timestamp.</li>
+<li><b>Normalise &amp; dedupe</b>Canonical URLs, text hashes, then similarity clustering so 14 articles about one notification become one story.</li>
+<li><b>Triage</b>A fast model classifies relevance and extracts entities: countries, HS codes, schemes, dates, clusters. Irrelevant items are dropped and logged.</li>
+<li><b>Score</b>Rules plus model fill in the Part 12 criteria. A saturation count comes from news queries. Ranked candidates.</li>
+<li class="gate"><b>Pick</b>Morning Desk Sheet. A human chooses the lead and backup and adds field notes.</li>
+<li><b>Research &amp; verify</b>A deep-analysis model with web search and fetch, restricted to trusted domains, builds a claims table: every claim carries a source URL, a quoted passage and a label.</li>
+<li><b>Angle &amp; draft</b>Angle Engine questions → two or three angle options → a draft in the house voice, a visual brief, the exposure line and a disclosure flag.</li>
+<li class="gate"><b>Approve</b>Analyst edits; founder approves by risk tier (Part 15). Reason codes are captured on every edit and rejection.</li>
+<li><b>Publish &amp; archive</b>Manual posting in v1. The post URL, final text and assets are stored, and review dates are set for any forward-looking calls.</li>
+<li><b>Measure &amp; learn</b>Weekly metrics import, lead attribution, a monthly job that proposes scoring-weight changes. A human accepts or rejects them.</li>
+</ol>
+<h3>Recommended stack</h3>
+<div class="tbl wide"><table>
+<thead><tr><th>Layer</th><th>Phase 1 (weeks 1–6)</th><th>Phase 2 (months 2–4)</th></tr></thead>
+<tbody>
+<tr><td>Runtime and schedule</td><td>Python scripts on the office Windows machine via Task Scheduler (05:30, 16:00, 21:00)</td><td>Cloud cron (e.g. GitHub Actions), or Claude Managed Agents scheduled deployments, so it doesn't depend on one PC</td></tr>
+<tr><td>Storage</td><td>SQLite file + daily backup</td><td>Postgres (e.g. Supabase) with the same schema (Part 14)</td></tr>
+<tr><td>Collectors</td><td>RSS/Atom (feedparser); Federal Register API; page-change diff for DGFT, CBIC, RBI, DGTR; IMAP parser for ePing and EPC emails; Google News RSS queries</td><td>+ UN Comtrade API for the exposure line; RASFF and FDA monthly pulls</td></tr>
+<tr><td>Triage model</td><td>Claude Haiku 4.5 (<span class="mono">claude-haiku-4-5</span>). Overnight items go through the Message Batches API at 50% cost.</td><td>Same; tuned on reason codes from rejections</td></tr>
+<tr><td>Analysis and drafting model</td><td>Claude Opus 5 (<span class="mono">claude-opus-5</span>) with adaptive thinking; server tools <span class="mono">web_search_20260209</span> / <span class="mono">web_fetch_20260209</span> restricted with <span class="mono">allowed_domains</span> for verification runs; structured outputs for the claims table</td><td>+ prompt caching of the stable voice guide, franchise templates and examples (cuts repeat input cost)</td></tr>
+<tr><td>Review surface</td><td>Desk Sheet emailed at 06:30; approval queue in a shared Google Sheet (status column, reason code, approver)</td><td>A small web dashboard: queue, claims table with source links, one-click approve or return</td></tr>
+<tr><td>Publishing</td><td>Manual on LinkedIn (founder); Meta Business Suite scheduling for Instagram</td><td>Scheduling tools allowed only for <em>approved</em> items. Still no auto-publish.</td></tr>
+<tr><td>Metrics</td><td>Weekly CSV export from LinkedIn and Instagram analytics; UTM links; a lead form with a "which post brought you?" field</td><td>Automated imports where APIs allow</td></tr>
+</tbody></table></div>
+<h3>Guardrails built into the pipeline</h3>
+<ul>
+<li><strong>No claim without a quote.</strong> The structured output schema <em>requires</em> <span class="mono">source_url</span> and <span class="mono">source_quote</span> for every numeric, date or rule claim. Drafts citing a claim not in the table are rejected automatically.</li>
+<li><strong>"Unknown" is a valid answer.</strong> Prompts tell the model to leave a field empty rather than infer a rate, date or value.</li>
+<li><strong>Fetched pages are data, not instructions.</strong> Text from the web is passed as quoted content, and the model is told never to follow instructions found inside it. Verification fetches are domain-restricted.</li>
+<li><strong>Recency check.</strong> Every claim records the document date. Anything older than the latest amendment in the database is flagged "possibly superseded".</li>
+<li><strong>Disclosure trigger.</strong> Any story tagged RoDTEP, RoSCTL, scrip or duty credit automatically gets the disclosure line in its draft.</li>
+<li><strong>Repeat detection.</strong> Similarity search against the last 90 days of posts; near-duplicates are flagged before scoring.</li>
+<li><strong>Human approval required</strong> at stages 5 and 8. The system has no credentials to publish anything.</li>
+</ul>
+<h3>Why not auto-publish?</h3>
+<p><span class="tag t-op">Opinion</span> The brand's entire value is accuracy and judgement. One auto-published misreading of a customs notification would cost more trust than a year of daily posts earns. It also creates a quiet liability: exporters may act on it. The only thing worth considering for automation later is <em>scheduling</em> an already-approved post. Even the weekly Freight Pulse chart should get a 30-second human glance.</p>
+<h3>Running cost (order of magnitude)</h3>
+<p><span class="tag t-fc">Estimate</span> At list prices, assuming the following daily volumes:</p>
+<ul>
+<li><strong>Triage:</strong> about 300 items a day on Haiku 4.5 ($1 / $5 per million input/output tokens, half price via Batches).</li>
+<li><strong>Deep analysis:</strong> about 5 stories a day on Opus 5 ($5 / $25), with roughly 40K tokens in and 5K out each.</li>
+<li><strong>Drafting:</strong> 2 drafts a day.</li>
+</ul>
+<p>Model spend comes to roughly <strong>US$75–150 a month</strong> before web-search tool charges and thinking tokens. Measure real usage from the API's usage fields in week one before trusting this figure. People, not models, are the real cost: the analyst is the essential hire.</p>
+<h3>Build sequence</h3>
+<div class="tbl"><table>
+<thead><tr><th>When</th><th>Deliverable</th></tr></thead>
+<tbody>
+<tr><td>Weeks 1–2</td><td>Manual desk: source list, alert subscriptions (ePing, Federal Register, EPCs), Google Sheet database, templates. <strong>Publishing starts now</strong>; automation catches up.</td></tr>
+<tr><td>Weeks 3–6</td><td>Collectors + SQLite + dedup + the 06:30 Desk Sheet email</td></tr>
+<tr><td>Weeks 7–12</td><td>Triage and scoring model; claims-table research runs; draft generation; approval queue</td></tr>
+<tr><td>Months 4–6</td><td>Metrics import, Calls Ledger automation, learning job, WhatsApp channel distribution, Postgres migration</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="p14" class="part" aria-labelledby="p14-h">
+<div class="part-label">Part 14</div>
+<h2 id="p14-h">Content memory: database design</h2>
+<p>The database is the Desk's memory. It stops repeats, powers the Ledger, shows which angles earn qualified attention, and becomes the raw material for LEAP. The schema covers every field the brief asked for and adds the ones that make learning possible.</p>
+<pre>-- Sources we monitor
+sources(id, name, url, kind[primary|secondary], signal_type[early|confirm|enforced|context],
+        cadence, method[rss|api|pagewatch|email|manual], country, reliability_1to5, active)
+
+-- Everything collected, verbatim
+raw_items(id, source_id, url, canonical_url, title, body_text, published_at, collected_at,
+          content_hash, language)
+
+-- One story = a cluster of raw items about one development
+stories(id, title, first_seen_at, source_published_at, primary_source_url,
+        primary_doc_ref,              -- e.g. "Notification No. 74/2025-26-DGFT"
+        topic_category, lifecycle_stage[draft|notified|effective|enforced|reported],
+        countries[], hs_codes[], industries[], clusters[], schemes[],
+        effective_date, deadline_date,
+        score_base, confidence_mult, penalties, score_final, score_breakdown_json,
+        saturation_count_72h, decision[lead|secondary|brief|watchlist|discard],
+        decision_reason, watch_trigger, revisit_on,
+        previously_covered bool, related_story_ids[], similarity_max)
+story_items(story_id, raw_item_id)
+
+-- Atomic claims with evidence
+claims(id, story_id, text, claim_type[fact|interpretation|forecast|opinion|speculation],
+       source_url, source_quote, source_date, verified_by, verified_at,
+       status[verified|pending|failed|superseded])
+
+-- Drafts and versions
+drafts(id, story_id, version, franchise, angle, hook, body, format, visual_brief,
+       exposure_line, disclosure_required bool, risk_tier[green|amber|red],
+       model_used, created_at, edited_by, edit_reason_codes[])
+
+-- What actually went out
+posts(id, draft_id, channel[linkedin_founder|linkedin_page|instagram|newsletter|whatsapp],
+      language, published_at, url, final_text, format, cta_type,
+      audience_segment, funnel_role, commercial_line[none|leap|advisory|incentive],
+      status[scheduled|published|corrected|withdrawn])
+post_metrics(post_id, captured_at, impressions, reactions, comments, reposts, saves, sends,
+             profile_visits, link_clicks, follows, dwell_or_watch_time,
+             qualified_comments, qualified_engagers_sampled, qualified_share)
+
+-- Accountability
+calls_ledger(id, post_id, call_text, confidence_word[likely|possible], made_on, review_on,
+             outcome_text, grade[right|partly|wrong|unresolved], graded_on, graded_by)
+corrections(id, post_id, error_text, correction_text, corrected_at, root_cause)
+
+-- Commercial attribution
+leads(id, created_at, name_hash, segment, channel, source_post_id, self_reported_source,
+      intent[leap|advisory|incentive_sell|incentive_buy|campus|other], stage, value_band)
+
+-- Learning and landscape
+approvals(id, draft_id, approver, decision, reason_code, decided_at, time_to_decide_min)
+competitor_posts(id, account, archetype, posted_at, topic, format, hook_type,
+                 reactions, comments, reposts, sample_commenter_mix_json)
+learnings(id, period, finding, evidence_json, action, weight_change_json, accepted bool)</pre>
+<h3>Why the extra fields matter</h3>
+<div class="tbl wide"><table>
+<thead><tr><th>Field</th><th>What it enables</th></tr></thead>
+<tbody>
+<tr><td><span class="mono">lifecycle_stage</span>, <span class="mono">source_published_at</span> vs <span class="mono">published_at</span></td><td>Measures lead time: how early the Desk is relative to the document and to media coverage. This is the "saw it first" metric.</td></tr>
+<tr><td><span class="mono">claims.claim_type</span>, <span class="mono">source_quote</span></td><td>Audit trail; the fact/interpretation discipline; defence if challenged</td></tr>
+<tr><td><span class="mono">revisit_on</span>, <span class="mono">watch_trigger</span>, <span class="mono">calls_ledger</span></td><td>Follow-ups and the public Ledger. Turns one story into a series.</td></tr>
+<tr><td><span class="mono">hs_codes[]</span>, <span class="mono">clusters[]</span>, <span class="mono">schemes[]</span></td><td>"What have we said about Ch. 61 this quarter?"; LEAP module assembly; cluster newsletters</td></tr>
+<tr><td><span class="mono">edit_reason_codes</span>, <span class="mono">approvals.reason_code</span></td><td>Trains the drafting prompts on what the founder always changes</td></tr>
+<tr><td><span class="mono">qualified_share</span>, <span class="mono">leads.source_post_id</span></td><td>Optimises for audience quality and business, not likes</td></tr>
+<tr><td><span class="mono">disclosure_required</span>, <span class="mono">risk_tier</span></td><td>Compliance and trust controls you can prove</td></tr>
+<tr><td><span class="mono">decision = discard</span> (logged)</td><td>Checks whether skipped topics later became big. This calibrates the scoring model.</td></tr>
+</tbody></table></div>
+</section>
+
+<section id="p15" class="part" aria-labelledby="p15-h">
+<div class="part-label">Part 15</div>
+<h2 id="p15-h">Approval workflow</h2>
+<p>Approval effort scales with risk. Most posts need five minutes of founder time. A few need a second pair of eyes.</p>
+<div class="tbl wide"><table>
+<thead><tr><th>Risk tier</th><th>What falls in it</th><th>Required before publishing</th><th>Approver</th></tr></thead>
+<tbody>
+<tr><td><strong>Green</strong></td><td>Evergreen and news-pegged explainers; Freight Pulse; Ask the Desk on settled questions</td><td>Claims table complete; analyst self-check</td><td>Analyst; founder spot-checks weekly</td></tr>
+<tr><td><strong>Amber</strong></td><td>Interpreting policy, data or FTAs; Countdowns; Second Order; Headline vs Reality</td><td>Primary document verified; every numeric claim quoted; interpretation labelled; pre-mortem line</td><td>Founder</td></tr>
+<tr><td><strong>Red</strong></td><td>Anything about incentives or scrips, duty liability, eligibility, legal interpretation, named companies, trade-remedy cases, geopolitics</td><td>All Amber checks + disclosure line (if scrip-related) + partner CA or customs-broker check for legal points + wording review against the uncertainty ladder</td><td>Founder + external check</td></tr>
+</tbody></table></div>
+<h3>Pre-publish checklist (10 items)</h3>
+<ol>
+<li>Primary source opened and its number, date and link recorded.</li>
+<li>Every number traceable to a quoted source line.</li>
+<li>"Effective" versus "notified" dates correct.</li>
+<li>Interpretation, forecast and opinion signalled in the language.</li>
+<li>HS lines, markets and clusters named correctly.</li>
+<li>An action is present, or the item is moved to the Watchlist.</li>
+<li>Disclosure line present if scrip, RoDTEP or RoSCTL is involved.</li>
+<li>No banned phrases; no income or outcome claims.</li>
+<li>Visual matches the text (no chart implying more precision than the data has).</li>
+<li>Any forward-looking call logged in the Calls Ledger with a review date.</li>
+</ol>
+<h3>Service levels and escalation</h3>
+<ul>
+<li>Lead post approved by <strong>10:30 IST</strong>. If it isn't, the backup Green item runs, and nothing unapproved goes out.</li>
+<li>Breaking primary-source news (e.g. a scheme extension notification) can use a <strong>fast lane</strong>: a factual-only post (what the document says, a link, "analysis tomorrow"), approved in 15 minutes.</li>
+<li><strong>Corrections:</strong> within 24 hours of detection. Edit the post, add a "Correction:" comment, and log a <span class="mono">corrections</span> row with its root cause. Review root causes monthly.</li>
+</ul>
+</section>
+
+<section id="p16" class="part" aria-labelledby="p16-h">
+<div class="part-label">Part 16</div>
+<h2 id="p16-h">Performance and learning loop</h2>
+<p><strong>North-star metric: qualified conversations per month.</strong> These are inbound DMs, calls or forms from people who export, import or have a real product and an intent to export, attributed to content. Likes are a diagnostic, never a goal.</p>
+<div class="tbl wide"><table>
+<thead><tr><th>Layer</th><th>Metrics</th><th>How to measure</th></tr></thead>
+<tbody>
+<tr><td>Reputation</td><td>Qualified share of new followers and engagers; saves and sends per 1,000 impressions; reposts by credible accounts (EPC staff, association office-bearers, bankers, journalists); citations and invitations; lead time versus media coverage</td><td>Monthly audit: sample 50 new engagers and classify them (exporter / importer / MSME / service provider / student / other)</td></tr>
+<tr><td>Habit</td><td>Newsletter subscribers and open rate; WhatsApp channel members; returning engagers (people who engage 3+ times a month)</td><td>Newsletter and WhatsApp stats; engager log</td></tr>
+<tr><td>Pipeline</td><td>Diagnostic bookings; LEAP waitlist and cohort sign-ups; advisory enquiries; Incentive Desk enquiries (sell and buy split)</td><td>Lead form with "which post brought you here?"; UTM links; the <span class="mono">leads</span> table</td></tr>
+<tr><td>Quality</td><td>Correction rate; Ledger hit rate (right / partly / wrong); claims failing verification at approval</td><td>Database</td></tr>
+<tr><td>Efficiency</td><td>Minutes of founder time per post; time from document to post</td><td>Approvals log</td></tr>
+</tbody></table></div>
+<h3>The loop</h3>
+<ol>
+<li><strong>Weekly (30 min, Friday).</strong> Top and bottom three posts by qualified engagement, not reach. For each, ask what in the franchise, angle, format or hook explains the result. Kill or keep one experiment.</li>
+<li><strong>Monthly (90 min).</strong>
+<ul>
+<li>Audience-quality audit.</li>
+<li>Ledger grading.</li>
+<li><strong>Score calibration:</strong> compare each post's predicted score with its realised qualified engagement and leads. If "Under-coverage" predicts outcomes better than "Time sensitivity", the learning job proposes shifting weight between them. A human accepts or rejects the change.</li>
+</ul></li>
+<li><strong>Quarterly.</strong>
+<ul>
+<li>Revisit segments and franchises.</li>
+<li>Retire any franchise below the median for two consecutive months.</li>
+<li>Reconsider cadence.</li>
+<li>Review the Incentive Desk against scheme developments.</li>
+</ul></li>
+</ol>
+<h3>Rules that stop the loop optimising the wrong thing</h3>
+<ul>
+<li>Never let a reach-winning format displace a franchise that produces leads.</li>
+<li>Viral posts with a low qualified share are treated as a <em>warning</em>, not a win. They pull the audience off-target.</li>
+<li>Compare posts only within their franchise. A Countdown and a Second Order do different jobs.</li>
+</ul>
+<h3>First-90-day targets (to calibrate, not to promise)</h3>
+<p><span class="tag t-op">Opinion</span></p>
+<ul>
+<li>At least 40% of sampled new engagers in target segments.</li>
+<li>At least 4 Calls Ledger entries graded publicly.</li>
+<li>At least 10 qualified conversations a month by day 90.</li>
+<li>Correction rate under 1 in 30 posts.</li>
+<li>A LEAP waitlist built only from the newsletter and WhatsApp.</li>
+</ul>
+<p>Adjust after month two, once there's real baseline data.</p>
+</section>
+
+<section id="p17" class="part" aria-labelledby="p17-h">
+<div class="part-label">Part 17</div>
+<h2 id="p17-h">30-day editorial plan · 15 Sep – 14 Oct 2026</h2>
+<p>This plan puts the strategy into practice. It is built around <strong>real dated events</strong>, called <em>anchors</em>. The other days are <em>slots</em> that hold a pre-researched candidate, replaced whenever the scoring model surfaces something stronger that morning. Every headline is a <em>working</em> headline. Nothing publishes until its "verify" column is done.</p>
+<p><strong>Totals:</strong> 22 founder LinkedIn posts, 4 Saturday Briefs, about 13 Instagram pieces, and 4 Sundays kept for Watchlist review.</p>
+<div class="tbl xwide"><table>
+<thead><tr><th>Date</th><th>Type</th><th>LinkedIn lead: franchise · working headline · angle</th><th>Verify before publishing</th><th>Instagram / other</th></tr></thead>
+<tbody>
+<tr><td class="mono">Tue 15 Sep</td><td>Anchor</td><td><strong>Countdown (launch).</strong> "Three dates in the next 17 days that change an Indian exporter's paperwork": 30 Sep (RoDTEP/RoSCTL extension ends), 30 Sep–1 Oct (G20 trade ministerial; US–India talks), 1 Oct (FEMA 2026 regime). Closes with two lines on what the Desk will do here.</td><td>RBI text for the FEMA effective date; G20 dates; any DGFT notice that morning</td><td>Reel: "What this account does now" (founder, Tamil + English captions)</td></tr>
+<tr><td class="mono">Wed 16 Sep</td><td>Slot</td><td><strong>The Number</strong> <em>if</em> August trade data is out: one line-level move linked to Hormuz or the US 10% tier. <em>Fallback:</em> Second Order on RoDTEP in US CVD cases.</td><td>Commerce ministry release; compute changes yourself</td><td>—</td></tr>
+<tr><td class="mono">Thu 17 Sep</td><td>Slot</td><td><strong>Freight Pulse #1.</strong> "Quoting CIF to a Gulf buyer during the Hormuz closure means underwriting war-risk you can't price." Incoterm and insurance actions.</td><td>Carrier surcharge notices; current routing status; war-risk cover availability</td><td>Carousel: "FOB vs CIF when the sea gets dangerous"</td></tr>
+<tr><td class="mono">Fri 18 Sep</td><td>Slot</td><td><strong>Headline vs Reality.</strong> "UK CETA, two months in: '99% of lines duty-free'. Where Indian products actually gained margin, and against whom." Three example lines.</td><td>UK tariff before and after for each line; which competitors already had UK preferences</td><td>—</td></tr>
+<tr><td class="mono">Sat 19 Sep</td><td>Anchor</td><td><strong>The Maverick Brief #1</strong> (newsletter launch): the week's five items with "so what", the Countdown, "what we're watching".</td><td>Every item's source line</td><td>Paperwork, Decoded #1: the shipping bill</td></tr>
+<tr><td class="mono">Sun 20 Sep</td><td>—</td><td colspan="3">No post. Watchlist review; prepare the RoDTEP scenario drafts.</td></tr>
+<tr><td class="mono">Mon 21 Sep</td><td>Anchor</td><td><strong>Countdown.</strong> "9 days: RoDTEP and RoSCTL. What to do with shipping bills, e-scrips and October quotes." Angle <span class="tag t-int">Interpretation</span>: price October quotes as if the benefit were zero and treat any extension as upside; generate pending e-scrips; check ARR status. <em>Disclosure line.</em> Red tier.</td><td>DGFT and Textiles Ministry for new notices; ICEGATE validity rule; ARR threshold</td><td>Reel: "RoDTEP in 60 seconds" (Tamil)</td></tr>
+<tr><td class="mono">Tue 22 Sep</td><td>Anchor</td><td><strong>The Fine Print.</strong> "From 1 October: 15 months to realise exports (18 if you invoice in rupees). And the part most coverage skips: the 9-month window since June." Amber/Red tier.</td><td>RBI regulations and Directions; transition treatment for pre-October shipments</td><td>—</td></tr>
+<tr><td class="mono">Wed 23 Sep</td><td>Slot</td><td><strong>Second Order.</strong> "Your RoDTEP benefit can be counted against you in a US countervailing duty case." The 21 Aug 2026 final CVD on oleoresin paprika from India, plus earlier cases. What to keep on file.</td><td>Federal Register notice and Issues &amp; Decision Memo: confirm RoDTEP is listed as countervailable in that case</td><td>Is This Real? #1: the fake letter of credit</td></tr>
+<tr><td class="mono">Thu 24 Sep</td><td>Slot</td><td><strong>Draft Watch #1.</strong> The highest-exposure SPS/TBT draft notified this month that affects a major Indian export (e.g. residue limits or labelling), with its comment deadline and what to ask your buyer.</td><td>ePing notification ID, product scope, comment deadline</td><td>—</td></tr>
+<tr><td class="mono">Fri 25 Sep</td><td>Slot</td><td><strong>Ask the Desk.</strong> "If RoDTEP isn't extended, what happens to scrips I already hold and shipments I've already made?" <em>Disclosure line.</em></td><td>Scrip validity; how the extension notification words its cut-off</td><td>One Word: "war-risk surcharge"</td></tr>
+<tr><td class="mono">Sat 26 Sep</td><td>Anchor</td><td><strong>Brief #2</strong></td><td>Source lines</td><td>—</td></tr>
+<tr><td class="mono">Sun 27 Sep</td><td>—</td><td colspan="3">No post. Finalise the 30 Sep scenario drafts (A: same-rate extension · B: extension with changes · C: lapse or transition · D: no announcement).</td></tr>
+<tr><td class="mono">Mon 28 Sep</td><td>Anchor</td><td><strong>Countdown (week ahead).</strong> 30 Sep scheme expiry · G20 trade ministerial opens 30 Sep · FEMA 2026 on 1 Oct · EUDR in 93 days.</td><td>Dates; latest DGFT notices</td><td>—</td></tr>
+<tr><td class="mono">Tue 29 Sep</td><td>Anchor</td><td><strong>Countdown special.</strong> "92 days: what your EU buyer will ask coffee and rubber exporters for (and why leather may be off the hook)."</td><td>Current EUDR text and the status of the simplification package and leather scope proposal</td><td>Carousel: EUDR in seven slides</td></tr>
+<tr><td class="mono">Wed 30 Sep</td><td>Anchor · reactive</td><td><strong>Scheme decision day.</strong> Publish only what is notified, via the fast lane: the matching scenario post (A/B/C/D) with actions for tomorrow's shipping bills. <em>Disclosure line.</em> If nothing is out by evening, post scenario D and check again at 21:00.</td><td>DGFT and Textiles Ministry notifications, including late uploads</td><td>—</td></tr>
+<tr><td class="mono">Thu 1 Oct</td><td>Anchor</td><td><strong>The Fine Print (day one).</strong> "New FEMA rules are live: five questions to ask your AD bank this week" (EDF, set-off, third-party receipts, INR invoicing). If the scheme notice landed late on 30 Sep, it takes this slot instead.</td><td>RBI Directions; bank circulars if available</td><td>Reel: "What changed today" (Tamil)</td></tr>
+<tr><td class="mono">Fri 2 Oct</td><td>Anchor</td><td><strong>Calls Ledger #1 (September).</strong> The flags we made (scheme scenarios, the FEMA transition, the Gulf Incoterm call) and what happened. Gandhi Jayanti, so keep it short.</td><td>Outcomes against sources</td><td>—</td></tr>
+<tr><td class="mono">Sat 3 Oct</td><td>Anchor</td><td><strong>Brief #3</strong>, including any outcome from the G20 ministerial and US–India talks</td><td>Official readouts only</td><td>Paperwork, Decoded #2: certificate of origin</td></tr>
+<tr><td class="mono">Sun 4 Oct</td><td>—</td><td colspan="3">No post.</td></tr>
+<tr><td class="mono">Mon 5 Oct</td><td>Slot (event-linked)</td><td><strong>Headline vs Reality.</strong> "'A preferential rate versus competitors': India's US tariff position against Vietnam, Bangladesh and China for knitwear, home textiles and pumps."</td><td>Each country's current US rate from USTR / Federal Register; don't estimate</td><td>—</td></tr>
+<tr><td class="mono">Tue 6 Oct</td><td>Slot</td><td><strong>The Fine Print.</strong> "Your EU buyer is pricing a 2026 carbon cost that gets paid in 2027." CBAM on steel articles and castings, plus UK CBAM from 1 Jan 2027. Coimbatore foundry angle.</td><td>EU CBAM certificate timeline; UK CBAM scope and date</td><td>60-Second Desk: CBAM with one invoice</td></tr>
+<tr><td class="mono">Wed 7 Oct</td><td>Slot</td><td><strong>Rejection Watch #1.</strong> "What the EU flagged from India in September": products, hazards, patterns, and what exporters in those lines should check.</td><td>RASFF data pull; count twice; no named firms unless in the public record</td><td>—</td></tr>
+<tr><td class="mono">Thu 8 Oct</td><td>Slot</td><td><strong>Freight Pulse #3.</strong> Gulf, Red Sea and EU lanes: rates, transit, surcharges.</td><td>Index values and carrier notices</td><td>Is This Real? #2: advance-fee "buyers"</td></tr>
+<tr><td class="mono">Fri 9 Oct</td><td>Slot</td><td><strong>Headline vs Reality.</strong> "Bangladesh's LDC graduation won't strip its EU apparel access this year. Tirupur should plan for 2029, not 2026."</td><td>UN CDP / UNGA decision on the deferral request; EU EBA transition terms</td><td>—</td></tr>
+<tr><td class="mono">Sat 10 Oct</td><td>Anchor</td><td><strong>Brief #4</strong>, with the first soft LEAP line: "We're building LEAP from this Desk. Join the waitlist."</td><td>Source lines</td><td>—</td></tr>
+<tr><td class="mono">Sun 11 Oct</td><td>—</td><td colspan="3">No post. Monthly review prep: audience audit and score calibration.</td></tr>
+<tr><td class="mono">Mon 12 Oct</td><td>Anchor</td><td><strong>Countdown.</strong> EUDR in 79 days · UK CBAM in 81 days · India–EU FTA signature steps.</td><td>Council / Commission status</td><td>—</td></tr>
+<tr><td class="mono">Tue 13 Oct</td><td>Slot</td><td><strong>Market Door #1.</strong> One UK CETA tariff line where Indian goods now enter duty-free, with UK import demand, main suppliers and the rules of origin to meet.</td><td>Tariff line; Trade Map / Comtrade figures; product-specific rules</td><td>Carousel version for Instagram</td></tr>
+<tr><td class="mono">Wed 14 Oct</td><td>Slot</td><td><strong>Case Note #1</strong> (only if a consented, anonymised case exists). <em>Fallback:</em> Ask the Desk #2 from September's inbox.</td><td>Client consent; anonymisation</td><td>Reality Check: "Who exporting is not for (yet)"</td></tr>
+</tbody></table></div>
+<div class="deadline-box"><span class="lbl">Urgent, outside the content plan · this week</span>
+<p>The Incentive Desk needs its own plan for <span class="date">30 SEP 2026</span>, whatever happens:</p>
+<ul>
+<li>Tell exporter clients to generate pending e-scrips.</li>
+<li>Review open buy and sell positions against each scenario.</li>
+<li>Prepare client communications for scenarios A–D.</li>
+</ul>
+<p>Do this privately and directly with clients, not in the public feed.</p></div>
+<h3>Next steps</h3>
+<ol>
+<li><strong>Decide</strong> on the positioning, the founder byline and the Desk name (this week).</li>
+<li><strong>Set up</strong> the free alerts today: ePing (HS chapters of priority clusters × key markets), Federal Register saved search for "India", DGFT and CBIC page watchers, EPC newsletters, Google News queries.</li>
+<li><strong>Hire or assign</strong> the research analyst. This is the critical dependency.</li>
+<li><strong>Run the 14-day competitor audit</strong> (Part 3) alongside the first two weeks of posting.</li>
+<li><strong>Publish</strong> the 15 Sep Countdown. The automation build (Part 13) starts in parallel and doesn't delay publishing.</li>
+</ol>
+</section>
+
+<section id="sources" class="part" aria-labelledby="src-h">
+<div class="part-label">Sources</div>
+<h2 id="src-h">Research sources (accessed 14 Sep 2026)</h2>
+<p>Primary sources are preferred; secondary sources are marked with Verify labels in the text where they carry a claim. Nothing here comes from files previously held by Maverick Minds.</p>
+<ol class="sources">
+<li>DGFT Notification 74/2025-26 (RoDTEP extension to 30 Sep 2026), via <a href="https://taxguru.in/dgft/dgft-extends-existing-rodtep-rates-exports-sept-30-2026.html">TaxGuru</a></li>
+<li>RoDTEP 50% cut (Notif. 60/2025-26) and restoration (Notif. 66/2025-26): <a href="https://www.ey.com/en_in/technical/alerts-hub/2026/02/dgft-restricts-rodtep-benefits-to-50pc-of-notified-rates-and-value-caps-on-exported-products">EY alert</a>, <a href="https://taxguru.in/dgft/rodtep-rates-restored-government-withdraws-50-percent-restriction.html">TaxGuru</a></li>
+<li>RoSCTL extension to 30 Sep 2026: <a href="https://www.pib.gov.in/PressReleasePage.aspx?PRID=2247851&amp;reg=3&amp;lang=1">PIB release</a>, <a href="https://www.fibre2fashion.com/news/apparel-clothing-policy-news/indian-govt-extends-rosctl-scheme-for-apparel-made-ups-exports-292725-newsdetails.htm">Fibre2Fashion</a></li>
+<li>Budget 2026-27 RoDTEP allocation: <a href="https://www.business-standard.com/budget/news/budget-2026-govt-lowers-funding-for-key-export-boosting-schemes-126020201188_1.html">Business Standard</a></li>
+<li>Export Promotion Mission: <a href="https://www.pmindia.gov.in/en/news_updates/cabinet-approves-export-promotion-mission-to-strengthen-indias-export-ecosystem-with-an-outlay-of-rs-25060-crore/">PM India</a></li>
+<li>Duty credit use (BCD only), Notification 24/2023-Customs (N.T.): <a href="https://taxguru.in/custom-duty/manner-issue-duty-credit-goods-exported-rodtep-scheme.html">TaxGuru</a></li>
+<li>ICEGATE e-scrip advisory (generation, transfer, OTP): <a href="https://taxguru.in/custom-duty/icegate-advisory-e-scrip-avail-export-incentive-schemes-rosctl-rodtep.html">TaxGuru reproduction</a></li>
+<li>E-scrip validity change: <a href="https://legalitysimplified.com/2022/09/27/cbic-extends-validity-of-scrips-issued-under-the-rodtep-scheme/">Legality Simplified</a> (secondary)</li>
+<li>Transferee liability amendments (Sept 2022): <a href="https://www.ascgroup.in/transferee-importer-not-responsible-upon-utilisation-of-rodtep-rosctl/">ASC Group</a></li>
+<li>GST nil on duty credit scrips: <a href="https://taxguru.in/goods-and-service-tax/gst-duty-credit-scrips-issued-rosctl-scheme.html">TaxGuru</a></li>
+<li>Annual RoDTEP Return: <a href="https://www.vjmglobal.com/blog/dgft-mandated-filing-annual-return-for-rodtep-scheme">VJM Global</a>, <a href="https://www.dgft.gov.in/CP/?opt=RODTEPARR">DGFT FAQ</a></li>
+<li>Scrip market pricing (secondary, indicative): <a href="https://raspinternational.in/blog/rodtep-rates-2026/">Rasp International</a></li>
+<li>US CVD determinations involving RoDTEP: <a href="https://www.federalregister.gov/documents/2023/10/05/2023-22197/paper-file-folders-from-india-final-affirmative-countervailing-duty-determination">Paper file folders (2023)</a>, <a href="https://www.federalregister.gov/documents/2026/08/21/2026-17048/oleoresin-paprika-from-india-final-affirmative-countervailing-duty-determination-and-final">Oleoresin paprika (21 Aug 2026)</a></li>
+<li>FEMA (Export and Import of Goods and Services) Regulations, 2026: <a href="https://www.lkslaw.com/insights/articles/rbi-releases-fema-2026-export-import-trade-regulations-what-businesses-need-to-know">LKS</a>, <a href="https://www.corplawupdates.in/updates/fema-export-realisation-period-9-months-first-amendment-2026">CorpLawUpdates</a></li>
+<li>US–India tariffs and BTA: <a href="https://www.whitehouse.gov/briefings-statements/2026/02/united-states-india-joint-statement/">White House joint statement</a>, <a href="https://www.indiatvnews.com/business/news/piyush-goyal-says-india-will-finalise-us-trade-deal-only-after-securing-preferential-tariff-terms-2026-09-03-1053194">India TV (3 Sep 2026)</a>, <a href="https://carraglobe.com/section-301-tariffs-2026/">Carra Globe on Section 301</a></li>
+<li>Strait of Hormuz crisis: <a href="https://en.wikipedia.org/wiki/2026_Strait_of_Hormuz_crisis">Wikipedia summary</a>, <a href="https://www.icra.in/Rating/DownloadResearchSpecialCommentReport?id=6819">ICRA (Mar 2026)</a></li>
+<li>India–UK CETA in force: <a href="https://www.pib.gov.in/PressReleasePage.aspx?PRID=2274280&amp;reg=48&amp;lang=2">PIB</a>, <a href="https://odi.org/en/insights/historic-uk-india-trade-deal-enters-into-force-now-comes-implementation/">ODI</a></li>
+<li>India–EU FTA status: <a href="https://commission.europa.eu/topics/trade/eu-india-trade-agreement_en">European Commission</a>, <a href="https://www.orfonline.org/expert-speak/the-india-eu-fta-from-political-agreement-to-ratification-and-coming-into-force">ORF</a></li>
+<li>EU CBAM: <a href="https://www.nature.com/articles/s41558-026-02607-y">Nature Climate Change</a>, <a href="https://carraglobe.com/eu-cbam-2026/">Carra Globe</a></li>
+<li>EUDR timeline: <a href="https://www.hoganlovells.com/en/publications/eu-deforestation-regulation-commission-publishes-simplification-package-ahead-of-december-2026">Hogan Lovells</a></li>
+<li>Bangladesh LDC graduation: <a href="https://www.newsonair.gov.in/bangladesh-seeks-3-year-delay-in-ldc-graduation">AIR News</a>, <a href="https://www.thedailystar.net/business/news/eus-gsp-lifeline-bangladesh-must-win-2029-4051411">The Daily Star</a></li>
+<li>WTO ePing: <a href="https://eping.wto.org/">ePing platform</a></li>
+<li>Competitors: <a href="https://exportexpertsglobal.com/online-import-export-course/">Export Experts Global</a>, <a href="https://www.instagram.com/exportexpertsglobal/">@exportexpertsglobal</a>, <a href="https://www.bharatudaanmission.in/">Bharat Udaan Mission</a>, <a href="https://www.iiiem.in/">iiiEM</a>, <a href="https://www.gfebusiness.org/">GFE Business</a>, <a href="https://gtri.co.in/aboutus">GTRI</a>, <a href="https://indiantradeportal.in/">Indian Trade Portal</a></li>
+<li>Platform behaviour (third-party, directional): <a href="https://dsmn8.com/blog/the-social-media-managers-guide-to-the-linkedin-algorithm-in-2026/">LinkedIn 2026 guide</a>, <a href="https://buffer.com/resources/instagram-algorithms/">Buffer on Instagram</a></li>
+<li>Maverick Minds public presence: <a href="https://www.maverickminds.in/about.html">maverickminds.in</a>, <a href="https://www.linkedin.com/in/keerthivhasanvenkat/">founder LinkedIn</a></li>
+</ol>
+</section>
+
+<footer>Prepared for Maverick Minds · 14 September 2026 · Draft for founder review. Scheme, tariff and regulatory statements reflect sources available on the research date. Re-verify every item before publication.</footer>
+</main>
+</div>
