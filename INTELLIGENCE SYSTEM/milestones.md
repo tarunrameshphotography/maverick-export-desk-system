@@ -102,6 +102,59 @@ manual claim verification → `radar content-bundle` → `radar draft-lint` end
 to end against a scratch DB, confirming the CLI wiring and DB writes work
 outside the test harness too.
 
+## Completed this session (2026-09-14, continuation)
+
+### Repo re-verification
+Cloned the repo fresh (this machine had no local copy) and independently
+re-ran the full suite before touching anything — confirmed the prior
+session's "223 passing" claim exactly, and confirmed `radar/content/drafts.py`
+genuinely still emitted `[WRITE:]`/`[VERIFY:]` scaffolds rather than finished
+prose. Surfaced that `CLAUDE.md` explicitly flags finishing that scaffold as
+a real product decision requiring the founder's sign-off — asked, and
+received it, before writing any generation code.
+
+### Phase 2, Part B — real content generation
+**What changed:**
+- New `radar/content/generation.py`: `generate_bundle_prose()` grounds every
+  generated asset in `claims` rows with `status='verified'` plus the
+  selected angle text only, via an injectable `GenerateFn` (real
+  implementation calls the Anthropic API; tests inject fakes so the suite
+  never touches the network). Every generated asset is saved through the
+  existing `save_draft_version` and linted through the existing
+  `lint_draft` — no new bypass of either.
+- `drafts.py::_exposure_line_template` now calls
+  `exposure_lookup.exposure_line` (previously wired only into the Desk
+  Sheet) instead of a permanent `[VERIFY: value]` placeholder — a genuine
+  fix, not just plumbing for generation: the old placeholder could never be
+  satisfied by any amount of "finishing," honest or not.
+- New CLI: `python -m radar content-generate <signal_id>`.
+- `requirements.txt` gained an optional `anthropic` dependency (not required
+  for collection/verification/scoring/scaffolding or for the test suite —
+  only for actually calling `content-generate`); `.env.example` documents
+  `ANTHROPIC_API_KEY` and `RADAR_CONTENT_MODEL`.
+
+**Tests added:** 11 new tests in `tests/test_generation.py`, including one
+that deliberately plants a fabricated number (a fake "model" that ignores
+the grounding instruction) to prove `lint_draft` actually catches it, not
+just that the wiring runs — and one proving that fabricated content still
+cannot reach `approved` status. Full suite: **234 passing** (was 223).
+
+**Verified live, not just under pytest:** ran `radar init` →
+seeded a signal/claim/angle by hand → `radar content-bundle` →
+`radar content-generate` end to end against a scratch DB. Without
+`ANTHROPIC_API_KEY`/the `anthropic` package installed, `content-generate`
+fails with a clear, actionable error rather than a silent bad result —
+confirming the CLI wiring is correct even though the real API call itself
+wasn't exercised in this pass (no API key configured in this environment;
+the module's own tests exercise every branch of the grounding/lint logic
+with fake models instead).
+
+**What was deliberately not done:** no change to `auto_publish`,
+`record_publication`, or the risk-tier/founder-approval gates in
+`set_draft_status` — a generated asset needs exactly the same human sign-off
+as a hand-written one before it can be marked approved, and there is still
+no code path that posts to LinkedIn or Instagram.
+
 ## Not started (see roadmap.md for detail)
 - Phase 3: publishing queue schema (`scheduled_at`, media requirement,
   platform post ID, error state).

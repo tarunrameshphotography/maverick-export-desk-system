@@ -41,33 +41,58 @@ radar/collectors/   RSS, Federal Register API, DGFT/CBIC page-watch + API, sampl
 radar/pipeline/      normalize -> dedupe/cluster -> entities -> classify -> exposure ->
                      saturation -> scoring -> verify -> evidence -> angles -> orchestrator
 radar/desk/          Desk Sheet, approvals (state machine), Calls Ledger, performance/learning
-radar/content/       drafts.py — content scaffolding + the pre-publish checklist
+radar/content/       drafts.py — content scaffolding + the pre-publish checklist;
+                     generation.py — Phase 2 prose generation (grounded LLM
+                     call filling the scaffold; founder-approved exception,
+                     see below)
 radar/db/            schema.sql (baseline) + migrations/NNN_*.sql (always applied, in order)
 radar/cli.py         every day-to-day command (see RADAR_README.md)
 ```
 
-Run `python -m pytest tests/ -q` before and after any change — **223 tests**,
-all passing as of this writing (started at 209 this session). If a change
-drops that number without an explicit, understood reason, stop and fix it
-before continuing.
+Run `python -m pytest tests/ -q` before and after any change — **234 tests**,
+all passing as of this writing. If a change drops that number without an
+explicit, understood reason, stop and fix it before continuing.
 
-## The hybrid model — read this before "finishing" anything
+## The hybrid model — and the one founder-approved exception to it
 
-`angles.py` and `content/drafts.py` are **deliberately** mechanical
-scaffolding, not prose generators. The module docstrings say so explicitly:
-angle-picking and copywriting are "genuine analytical work... routed to a
-Claude Code session rather than a keyword heuristic." Code's job is to
-assemble every verified fact, the selected angle, the disclosure line and the
-risk tier into a scaffold with `[HOOK]`/`[FACT]`/`[WRITE]`/`[VERIFY]`
-placeholders, and to refuse to let a draft go to `approved` status if a
-placeholder or an untraceable number survives (`lint_draft`).
+`angles.py` is still **deliberately** mechanical: angle-picking is "genuine
+analytical work... routed to a Claude Code session rather than a keyword
+heuristic," and nothing in this codebase auto-selects an angle.
 
-**Do not "fix" this by having code generate final prose unattended.** That is
-not a shortcut past unfinished work — it is the system deliberately keeping a
-human-or-Claude-Code-session as the author, which is the whole reason this
-brand is trusted. If a future task asks for fully automated prose, that is a
-real design decision requiring the founder's explicit sign-off, not an
-obvious next step.
+`content/drafts.py` builds the same kind of scaffold it always did —
+`create_content_bundle()` assembles every verified fact, the selected angle,
+the disclosure line and the risk tier into a structure with
+`[HOOK]`/`[FACT]`/`[WRITE]`/`[VERIFY]` placeholders. That step is unchanged
+and still exists on its own (`radar content-bundle`).
+
+**What changed (founder sign-off given explicitly, 2026-09-14):**
+`radar/content/generation.py` now fills that scaffold with real, finished
+prose via a direct Anthropic API call (`radar content-generate`), not an
+interactive Claude Code session. This was previously the one thing this file
+said not to do without the founder's explicit go-ahead — it has now been
+given, so treat the sentence "do not have code generate final prose
+unattended" as **superseded for this one call path**, not as still standing.
+Every guardrail that made unattended prose risky before is still fully
+enforced on the *output* of that call, unchanged:
+- Generation is grounded only in `claims` rows already `status='verified'`
+  (verify.py's machine-checked-quote gate) plus the selected angle text — the
+  prompt is given nothing else to draw "facts" from, and is explicitly told
+  never to state a number/date/HS code/value not present in that material.
+- `lint_draft` still runs on every generated asset and still blocks
+  `approved` status on a placeholder or an untraceable number —
+  `tests/test_generation.py::test_lint_catches_a_fabricated_number_the_model_invented`
+  plants a model that ignores the grounding instruction, to prove this catch
+  is real, not just wired.
+- `set_draft_status`'s risk-tier/founder-approval gates, `auto_publish`,
+  and `record_publication`'s "logs a publish, cannot create one" behavior are
+  completely untouched. A generated asset still needs the same human sign-off
+  as a hand-written one before it can be marked approved, and there is still
+  no code path that posts anywhere.
+
+If a *further* loosening is ever wanted (e.g. skipping human review for
+green-tier content, or letting generation retry itself past a lint failure),
+treat that the same way this one was treated: a real product decision
+requiring the founder's explicit sign-off, not an obvious next step.
 
 ## Guardrails that must never be silently removed
 

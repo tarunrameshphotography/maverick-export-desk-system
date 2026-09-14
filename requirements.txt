@@ -3,3 +3,9 @@ python-dateutil>=2.8
 PyYAML>=6.0
 requests>=2.31
 pytest>=7.0
+
+# Phase 2 Content Engine (radar/content/generation.py): generates real,
+# grounded prose to fill the content bundle. Not needed to run the
+# collection/verification/scaffolding pipeline or the test suite (tests
+# inject a fake generate_fn) — only for `content-generate`.
+anthropic>=0.40

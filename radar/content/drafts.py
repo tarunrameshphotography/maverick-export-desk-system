@@ -14,6 +14,7 @@ import re
 import sqlite3
 
 from radar import settings
+from radar.pipeline import exposure_lookup
 
 PLACEHOLDER_PATTERN = re.compile(r"\[(?:HOOK|VERIFY|ACTION|WRITE)[^\]]*\]|_\(fill[^)]*\)_")
 NUMBER_PATTERN = re.compile(r"\d[\d,]*(?:\.\d+)?%?")
@@ -60,28 +61,31 @@ def _exposure_line_template(conn: sqlite3.Connection, signal_id: str) -> str:
     # merges several clustered raw items can carry an inferred chapter from
     # an unrelated cluster, and joining it alongside a real code would read
     # as one fabricated-looking HS list.
+    #
+    # No bracket placeholder here even when no figure can be quoted: an
+    # honest "not auto-retrieved" sentence (exposure_lookup.exposure_line)
+    # is finished content in its own right, distinct from an analyst
+    # placeholder lint_draft should still catch elsewhere in the draft.
     stated = conn.execute(
         "SELECT DISTINCT normalized_value FROM signal_entities WHERE signal_id = ? AND entity_type = 'hs_code' "
         "AND confidence >= 0.9",
         (signal_id,),
     ).fetchall()
-    if stated:
-        hs = ", ".join(r["normalized_value"] for r in stated)
-    else:
-        inferred = conn.execute(
-            "SELECT DISTINCT normalized_value FROM signal_entities WHERE signal_id = ? AND entity_type = 'hs_code'",
-            (signal_id,),
-        ).fetchall()
-        hs = (
-            f"[VERIFY: HS code — chapter {inferred[0]['normalized_value']} inferred from product name, not stated]"
-            if inferred else "[VERIFY: HS code]"
-        )
     markets = [c for c in _signal_entities(conn, signal_id, "country") if c != "India"]
-    market = ", ".join(markets) or "[VERIFY: market]"
-    return (
-        f"India exported [VERIFY: value] of HS {hs} to {market} in [VERIFY: period] "
-        f"(source: [VERIFY: TradeStat / UN Comtrade])."
-    )
+    if stated:
+        hs_codes = [r["normalized_value"] for r in stated]
+        return exposure_lookup.exposure_line(hs_codes, markets)
+    inferred = conn.execute(
+        "SELECT DISTINCT normalized_value FROM signal_entities WHERE signal_id = ? AND entity_type = 'hs_code'",
+        (signal_id,),
+    ).fetchall()
+    if inferred:
+        chapter = inferred[0]["normalized_value"]
+        return (
+            f"No exposure figure quoted: chapter {chapter} is only inferred from the product name, "
+            f"not stated in the source, so it is not reliable enough to look up a trade value against."
+        )
+    return "No HS code extracted yet — cannot quote a trade exposure figure for this signal."
 
 
 def _next_version(conn: sqlite3.Connection, signal_id: str, asset_slot: str) -> int:

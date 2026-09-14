@@ -37,26 +37,32 @@ human today.
 | F | Verify (claims table, evidence) | **Done**, hybrid | `radar/pipeline/verify.py`, `evidence.py` |
 | G | Product / HS / market / Indian exposure | **Done, hardened this cycle** | `radar/pipeline/exposure.py`, `exposure_lookup.py`, `entities.py` |
 | H | Maverick Angle (human/Claude Code picks) | **Done**, hybrid | `radar/pipeline/angles.py` |
-| I | Content Engine — full asset bundle | **Done this cycle** (scaffold generation); prose still hybrid by design | `radar/content/drafts.py` |
+| I | Content Engine — full asset bundle, genuinely finished prose | **Done** — scaffold (`drafts.py`) + grounded LLM generation (`generation.py`), founder-approved | `radar/content/drafts.py`, `radar/content/generation.py` |
 | J | Quality control (lint, disclosure, risk tier, checklist) | **Done** | `radar/content/drafts.py::lint_draft`, `set_draft_status` |
 | K | Publishing queue (status/approval workflow) | **Partially done** — approval state machine exists; scheduling/media/error-state fields do not | `radar/desk/approvals.py`, `content_drafts` table |
 | L | Social publishing integrations (LinkedIn/Instagram APIs) | **Not built** — by design, gated behind `auto_publish` feature flag which cannot currently be enabled | none yet |
 | M | Daily orchestrator / scheduler | **Partially done** — collection is scheduled (`radar schedule`); content generation and publishing are not | `radar/runner.py`, `config/schedule.yaml` |
 | N | Performance capture & learning loop | **Done** for the metrics/Calls-Ledger side; no live API-based metrics ingestion yet (CSV import only) | `radar/desk/performance.py`, `calls_ledger.py` |
 
-## Why "hybrid" is a permanent architectural choice, not a stopgap
+## Why "hybrid" was the default, and what changed this cycle
 
-`angles.py` and (now) `drafts.py`'s asset bundle are deliberately mechanical:
-they assemble every fact, source and rule an author needs into a scaffold,
-but the actual sentence-writing — picking the angle, phrasing the hook — is
-explicitly routed to "the analyst or a Claude Code session" (see the module
-docstrings). This is not unfinished automation; it is the documented answer
-to "why not auto-publish?" in `automation_architecture.md`: genuine editorial
-judgement stays with a human-plus-Claude-Code session, and code enforces that
-nothing published is unsourced. Phase 2 (below) extended the *shape and
-completeness* of what the scaffold offers — a full 8-asset bundle instead of
-one draft per channel — without moving prose-writing into unattended code.
-That is a considered choice, not a gap to "finish" later; see
+`angles.py` is still deliberately mechanical: picking the angle — the
+genuine editorial judgement — stays "routed to the analyst or a Claude Code
+session," not automated. That has not changed and is not planned to.
+
+`drafts.py`'s scaffold (facts, angle, disclosure, risk tier assembled into a
+structure with placeholders) is also unchanged and still exists as its own
+step (`radar content-bundle`). What changed this cycle, with the founder's
+explicit sign-off (see `CLAUDE.md`'s "hybrid model" section): a new module,
+`radar/content/generation.py`, now fills that scaffold with real prose via a
+grounded LLM call (`radar content-generate`) instead of requiring a human or
+an interactive Claude Code session to write it by hand. The editorial
+judgement (which angle, which lead) is still human-gated; only the
+*sentence-writing*, once the angle is already chosen and the facts are
+already verified, is now automated — and every mechanism that made that safe
+to consider (grounding in verified claims only, `lint_draft`'s untraceable-
+number and placeholder checks, risk-tier approval gating, no `auto_publish`
+path) is unchanged and still enforced on the output. See
 [milestones.md](milestones.md) for what changed and why.
 
 ## Phases from here
@@ -82,22 +88,49 @@ without ever inventing one.
   cause is in dedupe/clustering, not exposure — worth a follow-up look if it
   recurs on real (non-sample) data.
 
-### Phase 2 — The Content Engine (this cycle)
+### Phase 2 — The Content Engine (done)
 **Goal:** the asset list the founder specified — three LinkedIn variants,
 two Reel concepts, a caption, a carousel, a visual-direction brief — each
-sourced back to the signal it came from.
-- New `create_content_bundle()` in `radar/content/drafts.py` creates all
-  eight assets in one call from a signal's selected angle + verified claims.
-  Each row carries `asset_slot` (new column, migration `005`), so the three
-  LinkedIn variants version independently instead of colliding.
+sourced back to the signal it came from, and (this cycle) genuinely finished,
+not a scaffold a human still has to write.
+
+**Part A — the bundle scaffold:**
+- `create_content_bundle()` in `radar/content/drafts.py` creates all eight
+  assets in one call from a signal's selected angle + verified claims. Each
+  row carries `asset_slot` (column, migration `005`), so the three LinkedIn
+  variants version independently instead of colliding.
 - The three LinkedIn variants are structurally distinct (consequence-first /
   fine-print / action-window emphasis), not copies with a different label.
-- Every asset's `source_reference` is the signal's primary document — the
-  literal mechanism satisfying "every generated asset must reference the
-  source signals it was produced from."
-- Existing single-draft workflow (`radar draft --channel`) is untouched and
-  still works (`asset_slot` back-fills to the channel name for those rows).
-- New CLI: `python -m radar content-bundle <signal_id>`.
+- Every asset's `source_reference` is the signal's primary document.
+- Existing single-draft workflow (`radar draft --channel`) is untouched.
+- CLI: `python -m radar content-bundle <signal_id>`.
+
+**Part B — real prose generation (founder sign-off given 2026-09-14):**
+- New `radar/content/generation.py::generate_bundle_prose()` takes a
+  scaffolded bundle and writes the actual finished text for every asset via
+  a direct Anthropic API call, grounded *only* in verified claims and the
+  selected angle — never given anything else to draw "facts" from, and
+  explicitly instructed never to state a number/date/HS code/value not in
+  that material.
+- Each generated asset is saved as a new draft version (`save_draft_version`
+  — full history preserved, `edited_by="claude_content_engine"`) and
+  immediately run through the existing `lint_draft`, unchanged — a
+  fabricated number or surviving placeholder still blocks approval exactly
+  as it would for hand-written copy.
+- `drafts.py::_exposure_line_template` now calls the real UN Comtrade lookup
+  (`exposure_lookup.exposure_line`, previously wired only into the Desk
+  Sheet) instead of emitting a `[VERIFY: value]` placeholder that could
+  never be finished — it now returns either a real retrieved figure or an
+  honest, bracket-free "not auto-retrieved, here's where to check" sentence.
+  Never a fabricated number, never a permanently-stuck placeholder.
+- `create_and_generate_bundle()` is the single-call entry point:
+  verified signal + selected angle → scaffold → generated prose → linted →
+  ready for the approval gate, in one call.
+- CLI: `python -m radar content-generate <signal_id>` (needs
+  `ANTHROPIC_API_KEY`; `content-bundle` alone still works without it).
+- `auto_publish`, `record_publication`, and risk-tier/founder approval gating
+  are completely untouched — a generated asset needs the same human sign-off
+  as a hand-written one, and nothing here can publish.
 
 ### Phase 3 — Publishing queue (next)
 Extend `content_drafts`/a new queue table with: `scheduled_at`, explicit

@@ -12,7 +12,7 @@ from pathlib import Path
 import yaml
 
 from radar import runner, settings
-from radar.content import drafts
+from radar.content import drafts, generation
 from radar.db.connection import get_connection, init_db, seed_sources
 from radar.desk import approvals, calls_ledger, performance
 from radar.desk.desk_sheet import write_desk_sheet
@@ -203,6 +203,23 @@ def cmd_content_bundle(a):
     print(drafts.render_bundle_brief(conn, draft_ids))
 
 
+def cmd_content_generate(a):
+    conn = _conn()
+    draft_ids = drafts.create_content_bundle(conn, a.signal_id, now_iso())
+    results = generation.generate_bundle_prose(conn, a.signal_id, draft_ids, now_iso())
+    dirty = 0
+    for slot in drafts.ASSET_SLOTS:
+        r = results[slot]
+        status = "clean" if not r["lint_issues"] else f"{len(r['lint_issues'])} lint issue(s)"
+        print(f"- {slot}: draft #{r['draft_id']} — {status}")
+        for issue in r["lint_issues"]:
+            print(f"    ! {issue}")
+        dirty += bool(r["lint_issues"])
+    print(f"\n{len(drafts.ASSET_SLOTS) - dirty}/{len(drafts.ASSET_SLOTS)} assets passed lint clean; "
+          "review before approving any of them.")
+    return 1 if dirty else 0
+
+
 def cmd_draft_edit(a):
     changes = {k: _read_text_arg(v) for k, v in
                (("headline", a.headline), ("body", a.body), ("exposure_line", a.exposure_line),
@@ -359,7 +376,10 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("signal_id")
     sp.add_argument("--channel", choices=["linkedin", "instagram"], default="linkedin")
     sp = add("content-bundle", cmd_content_bundle,
-             "create the full Phase 2 content bundle (3 LinkedIn + 2 Reels + caption + carousel + visual direction)")
+             "create the full Phase 2 content bundle scaffold (3 LinkedIn + 2 Reels + caption + carousel + visual direction)")
+    sp.add_argument("signal_id")
+    sp = add("content-generate", cmd_content_generate,
+             "create AND write the full Phase 2 content bundle (calls the Anthropic API; needs ANTHROPIC_API_KEY)")
     sp.add_argument("signal_id")
     sp = add("draft-edit", cmd_draft_edit, "save a new draft version (text or @file)")
     sp.add_argument("draft_id", type=int)
