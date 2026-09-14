@@ -391,6 +391,12 @@ def save_draft_version(
         tier=new["risk_tier"], status="edited", now_iso=now_iso, edited_by=edited_by,
         edit_reason_codes=edit_reason_codes or [],
     )
+    from radar.publishing import queue as publish_queue
+
+    publish_queue.supersede_for_slot(
+        conn, new["signal_id"], new["asset_slot"], now_iso,
+        f"slot '{new['asset_slot']}' has a newer version (draft #{draft_id})", edited_by,
+    )
     conn.commit()
     return draft_id
 
@@ -483,6 +489,10 @@ def set_draft_status(
             reason_code, now_iso,
         ),
     )
+    if status != "approved":
+        from radar.publishing import queue as publish_queue
+
+        publish_queue.supersede_for_draft(conn, draft_id, now_iso, f"draft #{draft_id} moved to {status}", reviewer)
     conn.commit()
 
 
@@ -495,12 +505,26 @@ def record_publication(
     commercial_line: str = "none",
 ) -> int:
     """Logs a post a human already published by hand. There is deliberately
-    no code path that posts to LinkedIn or Instagram."""
+    no code path that posts to LinkedIn or Instagram. If the draft is in the
+    publishing queue, that queue item is marked published too, so the
+    dispatcher can never post it a second time."""
+    from radar.publishing import queue as publish_queue
+
     draft = conn.execute("SELECT * FROM content_drafts WHERE id = ?", (draft_id,)).fetchone()
     if draft is None or draft["status"] != "approved":
         raise ValueError("Only approved drafts can be recorded as published")
     if draft["disclosure_required"] and settings.content_rules()["disclosure_line"] not in final_text:
         raise ValueError("Published text is missing the required disclosure line")
+    active = publish_queue.active_items_for_draft(conn, draft_id)
+    if len(active) > 1:
+        raise ValueError(f"Draft #{draft_id} has {len(active)} live queue items "
+                         f"({', '.join('#' + str(i['id']) for i in active)}); record it with queue-mark-published")
+    if active and active[0]["state"] == "publishing":
+        raise ValueError(f"Queue item #{active[0]['id']} has an automated attempt in flight; reconcile it instead")
+    if not active and conn.execute(
+        "SELECT 1 FROM published_content WHERE draft_id = ? AND status = 'published'", (draft_id,)
+    ).fetchone():
+        raise ValueError(f"Draft #{draft_id} is already recorded as published")
     cur = conn.execute(
         """
         INSERT INTO published_content (draft_id, channel, published_at, url, final_text, status, commercial_line)
@@ -508,6 +532,14 @@ def record_publication(
         """,
         (draft_id, draft["channel"], published_at, url, final_text, commercial_line),
     )
+    if active:
+        from radar.publishing.validation import parse_stored, utc_iso
+
+        stamp = utc_iso(parse_stored(published_at))
+        publish_queue.record_item_published(
+            conn, active[0], url=url, external_post_id=None, published_at=stamp, actor="manual_record",
+            at=stamp, via="manual (record_publication)", published_content_id=cur.lastrowid,
+        )
     conn.commit()
     return cur.lastrowid
 

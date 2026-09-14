@@ -75,6 +75,10 @@ def content_rules() -> dict:
     return _load_yaml("content_rules.yaml")
 
 
+def publishing_rules() -> dict:
+    return _load_yaml("publishing.yaml")
+
+
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")  # unused in v1 hybrid mode
 
 # Optional: UN Comtrade requires a free registered subscription key

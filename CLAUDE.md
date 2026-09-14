@@ -53,6 +53,17 @@ Run `python -m pytest tests/ -q` before and after any change — **234 tests**,
 all passing as of this writing. If a change drops that number without an
 explicit, understood reason, stop and fix it before continuing.
 
+## Work in progress — read first
+
+**Phase 3 (publishing queue) is half-built and checkpointed as of
+2026-09-14.** Code lives in `radar/publishing/` (+ migration `006`,
+`config/publishing.yaml`, CLI `queue-*` commands, hooks in `drafts.py`).
+It is committed but **untested** beyond the existing suite still passing.
+The exact remaining steps and the planned test list are in
+`INTELLIGENCE SYSTEM/milestones.md` under "Phase 3 — Publishing queue: IN
+PROGRESS". Finish those before starting anything else; remove this section
+when Phase 3 is complete.
+
 ## The hybrid model — and the one founder-approved exception to it
 
 `angles.py` is still **deliberately** mechanical: angle-picking is "genuine

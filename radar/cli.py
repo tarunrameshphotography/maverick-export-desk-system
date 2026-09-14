@@ -19,6 +19,8 @@ from radar.desk.desk_sheet import write_desk_sheet
 from radar.pipeline import angles, evidence, verify
 from radar.pipeline.exposure import IndianExposure
 from radar.pipeline.orchestrator import rescore_signal
+from radar.publishing import dispatch as publish_dispatch
+from radar.publishing import queue as publish_queue
 from radar.runlog import now_iso
 
 
@@ -245,6 +247,70 @@ def cmd_published(a):
     print(f"Recorded publication #{pid} (logged only — this system cannot post)")
 
 
+# ---------------------------------------------------------------- publishing queue (Phase 3)
+def cmd_queue(a):
+    print(publish_queue.render_queue(_conn(), include_terminal=a.all))
+
+
+def cmd_queue_add(a):
+    item_id, created = publish_queue.enqueue(
+        _conn(), a.draft_id, a.by, now_iso(), post_format=a.format, target_account=a.account,
+        caption_draft_id=a.caption_draft, commercial_line=a.commercial, allow_repeat_reason=a.allow_repeat,
+    )
+    item = publish_queue.get_item(_conn(), item_id)
+    print(f"{'Queued' if created else 'Already queued (no duplicate created)'}: item #{item_id} "
+          f"{item['platform']}/{item['post_format']} -> {item['target_account']} [{item['state']}]")
+
+
+def cmd_queue_media(a):
+    publish_queue.attach_media(
+        _conn(), a.item_id, a.path, a.kind, a.by, now_iso(), position=a.position, public_url=a.public_url,
+        alt_text=a.alt, title=a.title, duration_seconds=a.duration, page_count=a.pages,
+    )
+    print(publish_queue.render_item(_conn(), a.item_id, now_iso()))
+
+
+def cmd_queue_schedule(a):
+    at = publish_queue.schedule(_conn(), a.item_id, a.when, a.by, now_iso(), override_reason=a.override_cadence)
+    print(f"Item #{a.item_id} scheduled for {at} (UTC)")
+
+
+def cmd_queue_unschedule(a):
+    publish_queue.unschedule(_conn(), a.item_id, a.by, now_iso(), a.reason)
+    print(f"Item #{a.item_id} -> queued")
+
+
+def cmd_queue_cancel(a):
+    publish_queue.cancel(_conn(), a.item_id, a.by, now_iso(), a.reason)
+    print(f"Item #{a.item_id} -> cancelled")
+
+
+def cmd_queue_requeue(a):
+    state = publish_queue.requeue(_conn(), a.item_id, a.by, now_iso(), a.reason)
+    print(f"Item #{a.item_id} -> {state}")
+
+
+def cmd_queue_show(a):
+    print(publish_queue.render_item(_conn(), a.item_id, now_iso()))
+
+
+def cmd_queue_mark_published(a):
+    pid = publish_queue.mark_published_manually(_conn(), a.item_id, a.url, a.by, now_iso(),
+                                                published_at=a.at, external_post_id=a.post_id)
+    print(f"Item #{a.item_id} recorded as published (publication #{pid})")
+
+
+def cmd_queue_reconcile(a):
+    state = publish_queue.reconcile(_conn(), a.item_id, "published" if a.published else "not_published", a.by,
+                                    now_iso(), a.reason, url=a.url, external_post_id=a.post_id)
+    print(f"Item #{a.item_id} -> {state}")
+
+
+def cmd_queue_dispatch(a):
+    reports = publish_dispatch.dispatch_due(_conn(), now_iso(), dry_run=not a.live)
+    print(publish_dispatch.render_dispatch_report(reports, dry_run=not a.live))
+
+
 # ---------------------------------------------------------------- ledger & learning
 def cmd_call_add(a):
     cid = calls_ledger.add_call(_conn(), a.text, a.reasoning, a.source, a.made_on or date.today().isoformat(),
@@ -401,6 +467,65 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--text", required=True, help="final text, or @file")
     sp.add_argument("--at")
     sp.add_argument("--commercial", default="none", choices=["none", "leap", "advisory", "incentive"])
+
+    sp = add("queue", cmd_queue, "list the publishing queue (live items; --all includes finished ones)")
+    sp.add_argument("--all", action="store_true")
+    sp = add("queue-add", cmd_queue_add, "put an APPROVED draft in the publishing queue (idempotent)")
+    sp.add_argument("draft_id", type=int)
+    sp.add_argument("--by", required=True)
+    sp.add_argument("--format", help="post format, e.g. linkedin_text, linkedin_document, instagram_reel")
+    sp.add_argument("--account", help="target account (see config/publishing.yaml)")
+    sp.add_argument("--caption-draft", type=int, help="approved instagram_caption draft (Reels/carousels)")
+    sp.add_argument("--commercial", default="none", choices=["none", "leap", "advisory", "incentive"])
+    sp.add_argument("--allow-repeat", metavar="REASON", help="queue another asset of an already-queued story")
+    sp = add("queue-media", cmd_queue_media, "attach a media file to a queue item")
+    sp.add_argument("item_id", type=int)
+    sp.add_argument("path")
+    sp.add_argument("--kind", required=True, choices=["image", "video", "document", "cover_image"])
+    sp.add_argument("--by", required=True)
+    sp.add_argument("--position", type=int, default=1)
+    sp.add_argument("--public-url", help="https URL the platform can fetch (Instagram API needs one)")
+    sp.add_argument("--alt")
+    sp.add_argument("--title", help="document title (required for LinkedIn documents)")
+    sp.add_argument("--duration", type=float, help="video length in seconds (declared, not parsed)")
+    sp.add_argument("--pages", type=int, help="document page count (declared, not parsed)")
+    sp = add("queue-schedule", cmd_queue_schedule, "schedule a queued item (time in IST unless an offset is given)")
+    sp.add_argument("item_id", type=int)
+    sp.add_argument("when", help="e.g. 2026-09-15T09:00")
+    sp.add_argument("--by", required=True)
+    sp.add_argument("--override-cadence", metavar="REASON")
+    sp = add("queue-unschedule", cmd_queue_unschedule, "take a scheduled item back to queued")
+    sp.add_argument("item_id", type=int)
+    sp.add_argument("--by", required=True)
+    sp.add_argument("--reason", required=True)
+    sp = add("queue-cancel", cmd_queue_cancel, "remove an item from the queue (kept as history)")
+    sp.add_argument("item_id", type=int)
+    sp.add_argument("--by", required=True)
+    sp.add_argument("--reason", required=True)
+    sp = add("queue-requeue", cmd_queue_requeue, "bring a held/failed item back after fixing the cause")
+    sp.add_argument("item_id", type=int)
+    sp.add_argument("--by", required=True)
+    sp.add_argument("--reason", required=True)
+    sp = add("queue-show", cmd_queue_show, "full detail, live checks and history for one queue item")
+    sp.add_argument("item_id", type=int)
+    sp = add("queue-mark-published", cmd_queue_mark_published, "record that a queue item was posted by hand")
+    sp.add_argument("item_id", type=int)
+    sp.add_argument("--url", required=True)
+    sp.add_argument("--by", required=True)
+    sp.add_argument("--at", help="when it was posted (IST unless an offset is given); default now")
+    sp.add_argument("--post-id", help="the platform's post ID, if known")
+    sp = add("queue-reconcile", cmd_queue_reconcile, "resolve an unknown publish outcome after checking the platform")
+    sp.add_argument("item_id", type=int)
+    g = sp.add_mutually_exclusive_group(required=True)
+    g.add_argument("--published", dest="published", action="store_true")
+    g.add_argument("--not-published", dest="published", action="store_false")
+    sp.add_argument("--url")
+    sp.add_argument("--post-id")
+    sp.add_argument("--by", required=True)
+    sp.add_argument("--reason", required=True)
+    sp = add("queue-dispatch", cmd_queue_dispatch,
+             "scheduler tick: dry run of everything due (--live is refused while auto_publish is false)")
+    sp.add_argument("--live", action="store_true")
 
     sp = add("call-add", cmd_call_add, "log a forward-looking call in the Calls Ledger")
     sp.add_argument("--text", required=True)

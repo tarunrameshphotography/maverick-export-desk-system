@@ -39,7 +39,7 @@ human today.
 | H | Maverick Angle (human/Claude Code picks) | **Done**, hybrid | `radar/pipeline/angles.py` |
 | I | Content Engine — full asset bundle, genuinely finished prose | **Done** — scaffold (`drafts.py`) + grounded LLM generation (`generation.py`), founder-approved | `radar/content/drafts.py`, `radar/content/generation.py` |
 | J | Quality control (lint, disclosure, risk tier, checklist) | **Done** | `radar/content/drafts.py::lint_draft`, `set_draft_status` |
-| K | Publishing queue (status/approval workflow) | **Partially done** — approval state machine exists; scheduling/media/error-state fields do not | `radar/desk/approvals.py`, `content_drafts` table |
+| K | Publishing queue (status/approval workflow) | **In progress (Phase 3, checkpointed 2026-09-14)** — queue schema, lifecycle, scheduling, dispatch seam and CLI are built; tests and docs still to do. See milestones.md "Phase 3 — IN PROGRESS" | `radar/publishing/`, migration `006` |
 | L | Social publishing integrations (LinkedIn/Instagram APIs) | **Not built** — by design, gated behind `auto_publish` feature flag which cannot currently be enabled | none yet |
 | M | Daily orchestrator / scheduler | **Partially done** — collection is scheduled (`radar schedule`); content generation and publishing are not | `radar/runner.py`, `config/schedule.yaml` |
 | N | Performance capture & learning loop | **Done** for the metrics/Calls-Ledger side; no live API-based metrics ingestion yet (CSV import only) | `radar/desk/performance.py`, `calls_ledger.py` |

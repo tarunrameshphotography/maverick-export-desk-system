@@ -1,0 +1,137 @@
+# Publishing queue rules (Phase 3). Platform limits below were checked against
+# the official docs on 2026-09-14 — re-check them when Phase 4 builds the real
+# adapters, because platforms change these without notice:
+#   LinkedIn Posts/Images/Documents/Videos/MultiImage APIs (learn.microsoft.com,
+#     li-lms-2026-08); commentary limit from the UGC Post API page.
+#   Instagram content publishing + IG User Media reference
+#     (developers.facebook.com/docs/instagram-platform).
+# Editorial cadence comes from STRATEGY/linkedin_strategy.md and
+# STRATEGY/instagram_strategy.md — change the doc and this file together.
+
+# India has no DST, so a fixed offset is exact. Naive schedule times typed at
+# the CLI are read in this offset; everything is stored in UTC.
+timezone_offset: "+05:30"
+
+accounts:
+  linkedin:
+    default: founder_profile          # linkedin_strategy.md: "Primary account: Founder's profile"
+    allowed: [founder_profile, company_page]
+  instagram:
+    default: business_account         # Instagram API publishing needs a professional account
+    allowed: [business_account]
+
+# Which bundle slots may be published, and as what. Slots not listed here
+# (visual_direction, the legacy combined 'instagram' concept brief) are
+# internal and can never be enqueued.
+slot_formats:
+  linkedin:        [linkedin_text, linkedin_image, linkedin_multi_image, linkedin_document, linkedin_video]
+  linkedin_post_1: [linkedin_text, linkedin_image, linkedin_multi_image, linkedin_document, linkedin_video]
+  linkedin_post_2: [linkedin_text, linkedin_image, linkedin_multi_image, linkedin_document, linkedin_video]
+  linkedin_post_3: [linkedin_text, linkedin_image, linkedin_multi_image, linkedin_document, linkedin_video]
+  instagram_caption:  [instagram_image]
+  instagram_carousel: [instagram_carousel]
+  instagram_reel_1:   [instagram_reel]
+  instagram_reel_2:   [instagram_reel]
+
+# Per-format rules. `media` maps a media kind to [min, max] count.
+# `caption_from: caption_draft` means the published text is a separately
+# approved instagram_caption draft (a Reel's draft is a script and a
+# carousel's draft is slide text — neither is the caption).
+formats:
+  linkedin_text:
+    platform: linkedin
+    text_max_chars: 3000
+    media: {}
+  linkedin_image:
+    platform: linkedin
+    text_max_chars: 3000
+    media: {image: [1, 1]}
+  linkedin_multi_image:               # organic multi-image: 2-20 images
+    platform: linkedin
+    text_max_chars: 3000
+    media: {image: [2, 20]}
+  linkedin_document:                  # LinkedIn's organic "carousel" is a document post; organic carousel content is sponsored-only
+    platform: linkedin
+    text_max_chars: 3000
+    media: {document: [1, 1]}
+    requires_document_title: true     # Posts API: media.title is required for documents
+  linkedin_video:
+    platform: linkedin
+    text_max_chars: 3000
+    media: {video: [1, 1]}
+  instagram_image:
+    platform: instagram
+    caption_from: self
+    text_max_chars: 2200
+    max_hashtags: 30
+    max_mentions: 20
+    media: {image: [1, 1]}
+  instagram_carousel:
+    platform: instagram
+    caption_from: caption_draft
+    text_max_chars: 2200
+    max_hashtags: 30
+    max_mentions: 20
+    media: {image: [2, 10]}           # IG allows up to 10 items; one item is a single-image post, not a carousel
+  instagram_reel:
+    platform: instagram
+    caption_from: caption_draft
+    text_max_chars: 2200
+    max_hashtags: 30
+    max_mentions: 20
+    media: {video: [1, 1], cover_image: [0, 1]}
+
+media_rules:
+  linkedin:
+    image:    {mime: [image/jpeg, image/png, image/gif], max_pixels: 36152320}
+    document: {mime: [application/pdf, application/vnd.ms-powerpoint,
+                      application/vnd.openxmlformats-officedocument.presentationml.presentation,
+                      application/msword,
+                      application/vnd.openxmlformats-officedocument.wordprocessingml.document],
+               max_bytes: 104857600, max_pages: 300}
+    video:    {mime: [video/mp4], min_bytes: 76800, max_bytes: 524288000, min_seconds: 3, max_seconds: 1800}
+    api_needs: local_path             # LinkedIn API uploads the bytes (initializeUpload + PUT)
+  instagram:
+    image:       {mime: [image/jpeg], max_bytes: 8388608, min_width: 320, max_width: 1440,
+                  min_aspect: 0.8, max_aspect: 1.91}
+    cover_image: {mime: [image/jpeg], max_bytes: 8388608}
+    video:       {mime: [video/mp4, video/quicktime], max_bytes: 314572800, min_seconds: 3, max_seconds: 900}
+    api_needs: public_url             # IG fetches media from a publicly reachable URL at publish time
+
+cadence:
+  linkedin:                           # "Five posts a week (Mon-Fri) ... Sunday off"
+    allowed_weekdays: [mon, tue, wed, thu, fri]
+    max_per_day: 1
+    max_per_week: 5
+    min_gap_minutes: 240
+  instagram:                          # "Run Instagram at a lower cadence (3-4 posts a week)"
+    allowed_weekdays: [mon, tue, wed, thu, fri, sat, sun]
+    max_per_day: 1
+    max_per_week: 4
+    min_gap_minutes: 240
+
+# An approval is a judgement about facts on a given day. Regulatory facts move,
+# so an approval must still be this fresh at the moment the post goes out.
+# null = no expiry. Founder-adjustable policy, not an external rule.
+approval_max_age_hours:
+  green: null
+  amber: 168
+  red: 48
+
+# Mirrors approval_workflow.md: tiers the founder must approve are also tiers
+# only the founder may schedule (the founder sees the final media at that point).
+founder_schedules_tiers: [amber, red]
+
+# Another asset from the same signal on the same account is refused while one
+# is live, or within this many days of one being published (e.g. LinkedIn
+# variants 1 and 2 of the same story). An explicit, recorded reason overrides.
+repeat_window_days: 14
+
+retry:
+  max_attempts: 3
+  backoff_base_minutes: 5
+  backoff_max_minutes: 120
+
+# How long a claimed item may stay 'publishing' before it is treated as an
+# unknown outcome (-> needs_reconciliation; never retried automatically).
+lease_minutes: 15

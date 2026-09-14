@@ -155,6 +155,85 @@ with fake models instead).
 as a hand-written one before it can be marked approved, and there is still
 no code path that posts to LinkedIn or Instagram.
 
+## Phase 3 — Publishing queue: IN PROGRESS (checkpoint 2026-09-14, not finished)
+
+Work stopped mid-phase at the founder's request to resume on another PC.
+**The code below is committed but Phase 3 is NOT done** — do not mark it
+complete until the remaining items are finished and tested.
+
+**Built and wired (existing 234 tests still pass; nothing new is tested yet):**
+- Migration `006_publishing_queue.sql`: `publish_queue`, `queue_media`,
+  `publish_attempts`, `queue_events`; `published_content` gains
+  `platform_post_id` + `queue_item_id`. Partial unique index on
+  `idempotency_key` over live + published items (idempotent enqueue).
+- `radar/config/publishing.yaml`: slot→format map, per-format text/media
+  rules (LinkedIn + Instagram limits verified against official docs
+  2026-09-14 — sources listed in the file header), editorial cadence from
+  `STRATEGY/*_strategy.md`, approval freshness per tier (red 48h, amber 7d),
+  founder-only scheduling for amber/red, retry/backoff, lease minutes.
+- `radar/publishing/validation.py`: file inspection (size, sha256, real
+  image type + pixel dimensions; video duration / PDF pages must be
+  *declared*), text/media validation, and the draft/approval/signal gates.
+- `radar/publishing/queue.py`: state machine (awaiting_media, queued,
+  scheduled, publishing, published, retry_pending, needs_reconciliation,
+  held, failed, cancelled, superseded) with compare-and-set transitions and
+  a `queue_events` audit row per change; enqueue, attach_media, schedule
+  (cadence + freshness + founder rule), unschedule, cancel, requeue,
+  mark_published_manually, reconcile, supersession hooks, views.
+- `radar/publishing/dispatch.py`: `dispatch_due` (dry run by default; live
+  refused unless `auto_publish`), pre-flight gate, CAS claim + lease +
+  attempt row committed before the platform call, retry/backoff,
+  unknown outcomes → `needs_reconciliation` (never auto-retried),
+  stale-lease recovery, `Publisher` protocol for Phase 4. No real platform
+  publisher exists.
+- `drafts.py` hooks: `save_draft_version` supersedes live queue items for
+  that slot (incl. Reels/carousels using that caption); `set_draft_status`
+  away from approved supersedes items using that draft;
+  `record_publication` now reconciles the matching queue item and refuses
+  a duplicate record for an already-published draft.
+- CLI: `queue`, `queue-add`, `queue-media`, `queue-schedule`,
+  `queue-unschedule`, `queue-cancel`, `queue-requeue`, `queue-show`,
+  `queue-mark-published`, `queue-reconcile`, `queue-dispatch [--live]`.
+  Smoke-checked only: `init` applies 006, `queue` / `queue-dispatch` run on
+  an empty DB, `queue-dispatch --live` is refused (exit 2).
+
+**Remaining to finish Phase 3 (in this order):**
+1. `tests/test_publishing_queue.py` — planned coverage: approval gate
+   (unapproved / stale version / tampered status with no approval record /
+   internal slots refused), idempotent enqueue, same-signal repeat guard +
+   recorded override, Reel/carousel needs an approved caption draft and
+   publishes the caption not the script, supersession on new version /
+   rejection / new caption version, media validation (IG JPEG-only, aspect,
+   width; declared duration; file changed after attach; IG needs https
+   public URL for API), scheduling (past time, IST→UTC, weekend + per-day
+   cadence + override audit, founder-only amber/red, approval freshness at
+   scheduled time), dispatch (dry run changes no state and never calls a
+   publisher; live refused by the gate; not due before scheduled_at; with
+   the gate monkeypatched: success writes published_content with
+   platform_post_id, "published" without an ID → reconciliation,
+   retryable backoff 5→10 min then failed at max_attempts, retry_after
+   respected, permanent error → failed, publisher exception → unknown and
+   never re-called, stale lease → reconciliation, CAS claim refuses a stale
+   row, pre-flight holds on stale approval and supersedes on tampered
+   text), manual publication (prevents re-dispatch; legacy
+   `record_publication` reconciles the item and refuses duplicates;
+   refused while an attempt is in flight), invalid transitions refused,
+   audit trail complete, requeue gives a new retry budget with attempt
+   numbers continuing, migration 006 upgrades a DB that already has
+   `published_content` rows, and a CLI walkthrough.
+2. Fix whatever those tests find.
+3. Realistic lifecycle smoke test on a scratch DB via the CLI.
+4. Update CLAUDE.md / roadmap.md / this file / RADAR_README.md to the
+   finished state; commit; push; verify the remote.
+
+**Design decisions already made (see the module docstrings for why):**
+`held` (our gate stopped it) is separate from `failed` (platform rejected
+it / retries exhausted); approval freshness and founder-only scheduling are
+config policy the founder can change; LinkedIn's organic "carousel" is a
+document or multi-image post because the Posts API supports organic
+carousels only as sponsored content; Instagram Reels/carousels publish the
+separately approved `instagram_caption` draft as their caption.
+
 ## Not started (see roadmap.md for detail)
 - Phase 3: publishing queue schema (`scheduled_at`, media requirement,
   platform post ID, error state).
