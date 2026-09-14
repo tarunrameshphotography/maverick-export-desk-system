@@ -116,6 +116,7 @@ sources:
     method: pagewatch
     parse: anchors
     link_must_contain: /anti-dumping-cases/
+    authority: DGTR
     country: IN
     category: trade_remedies
     reliability_1to5: 4

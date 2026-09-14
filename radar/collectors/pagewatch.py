@@ -136,6 +136,7 @@ class PagewatchCollector(Collector):
             return items
 
         link_must_contain = source.get("link_must_contain")
+        authority = source.get("authority", "")
         items: list[RawItem] = []
         seen_urls: set[str] = set()
         for href, text in parser.anchors:
@@ -147,7 +148,12 @@ class PagewatchCollector(Collector):
             if absolute_url in seen_urls:
                 continue
             seen_urls.add(absolute_url)
-            items.append(RawItem(source_id=source["id"], title=text, url=absolute_url))
+            # A source's own case listing often doesn't restate its authority or
+            # "India" in every title (e.g. a DGTR case naming only the foreign
+            # respondent countries) — without it, entity extraction has nothing
+            # to establish Indian implication (G2) from, and gets discarded.
+            body_text = f"{authority}: {text}" if authority else ""
+            items.append(RawItem(source_id=source["id"], title=text, url=absolute_url, body_text=body_text))
         if link_must_contain and not items:
             # A configured filter that matches nothing means the page's link
             # structure changed, not that there's simply no news today.

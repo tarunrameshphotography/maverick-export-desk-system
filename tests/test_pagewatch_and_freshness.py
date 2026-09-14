@@ -93,6 +93,30 @@ def test_anchor_mode_with_link_filter_and_zero_matches_is_a_failed_source(monkey
         )
 
 
+def test_anchor_mode_carries_authority_into_body_text_for_entity_extraction(monkeypatch):
+    # DGTR's own case titles rarely say "India" or "DGTR" outright (e.g. "Anti-dumping
+    # investigation on imports of Medical Examination Rubber Gloves from Malaysia and
+    # Thailand") -- without an authority tag, entity extraction has nothing to key off
+    # and G2 (Indian implication) wrongly fails every DGTR case.
+    html = ('<a href="/en/anti-dumping-cases/gloves">Anti-dumping investigation on imports of '
+            'Medical Examination Rubber Gloves from Malaysia and Thailand</a>')
+    items = _collect(
+        monkeypatch, html,
+        {"id": "dgtr_cases", "url": "https://www.dgtr.gov.in/en/x", "parse": "anchors",
+         "link_must_contain": "/anti-dumping-cases/", "authority": "DGTR"},
+    )
+    assert len(items) == 1
+    assert "DGTR" in items[0].body_text
+    values = {(e["entity_type"], e["normalized_value"]) for e in extract_entities(items[0].title + " " + items[0].body_text)}
+    assert ("authority", "DGTR") in values
+
+
+def test_anchor_mode_without_authority_config_leaves_body_text_empty(monkeypatch):
+    html = '<a href="/b">Amendment in Para 2.93 of the Handbook of Procedures</a>'
+    items = _collect(monkeypatch, html, {"id": "x", "url": "https://example.gov.in/", "parse": "anchors"})
+    assert items[0].body_text == ""
+
+
 def test_is_stale_respects_lookback_and_keeps_undated_items():
     today = date(2026, 9, 14)
     assert is_stale(RawItem("s", "t", "u", published_at="2026-08-01"), 21, today)
