@@ -26,7 +26,7 @@ def _signal_text_and_sources(conn: sqlite3.Connection, signal_id: str) -> tuple[
     so two items from one outlet never satisfy the two-source rule."""
     rows = conn.execute(
         """
-        SELECT ri.title, ri.body_text, ri.canonical_url, ri.url, s.kind
+        SELECT ri.title, ri.body_text, ri.canonical_url, ri.url, ri.publisher, s.kind
         FROM raw_items ri JOIN sources s ON s.id = ri.source_id
         WHERE ri.signal_id = ?
         """,
@@ -39,7 +39,8 @@ def _signal_text_and_sources(conn: sqlite3.Connection, signal_id: str) -> tuple[
     ).fetchone()["n"]
     has_primary = any(r["kind"] == "primary" for r in rows) or verified_primary > 0
     secondary_publishers = {
-        urlsplit(r["canonical_url"] or r["url"] or "").netloc for r in rows if r["kind"] == "secondary"
+        (r["publisher"] or urlsplit(r["canonical_url"] or r["url"] or "").netloc).removeprefix("www.")
+        for r in rows if r["kind"] == "secondary"
     } - {""}
     return text, has_primary, len(secondary_publishers)
 

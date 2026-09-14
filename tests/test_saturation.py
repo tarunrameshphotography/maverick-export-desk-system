@@ -88,6 +88,27 @@ def test_count_matching_secondary_items_ignores_primary_sources(conn):
     assert count_matching_secondary_items_72h(conn, "SIG-A") == 0
 
 
+def test_shared_country_alone_does_not_count_as_same_story(conn):
+    from radar.db.connection import seed_sources
+
+    seed_sources(conn)
+    _setup_signal_with_entities(conn, "SIG-A", "2026-09-14T06:00:00", [("country", "India"), ("scheme", "RoDTEP")])
+    _setup_signal_with_entities(conn, "SIG-B", "2026-09-14T05:00:00", [("country", "India"), ("regulation", "CBAM")])
+    _add_raw_item(conn, "business_standard_economy", "SIG-B", "2026-09-14T05:00:00")
+    assert count_matching_secondary_items_72h(conn, "SIG-A") == 0
+
+
+def test_own_cluster_news_coverage_counts_toward_saturation(conn):
+    from radar.db.connection import seed_sources
+
+    seed_sources(conn)
+    _setup_signal_with_entities(conn, "SIG-A", "2026-09-14T06:00:00", [("scheme", "RoDTEP")])
+    _add_raw_item(conn, "business_standard_economy", "SIG-A", "2026-09-14T05:00:00")
+    _add_raw_item(conn, "google_news_india_tariffs", "SIG-A", "2026-09-14T05:10:00")
+    _add_raw_item(conn, "dgft_notifications", "SIG-A", "2026-09-14T04:00:00")  # primary: not "coverage"
+    assert count_matching_secondary_items_72h(conn, "SIG-A") == 2
+
+
 def test_compute_saturation_returns_full_dict(conn):
     from radar.db.connection import seed_sources
 

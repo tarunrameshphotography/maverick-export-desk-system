@@ -6,6 +6,16 @@
 #   completeness and extensibility (Section 4) but not collected until a
 #   later phase (needs an inbox connector or portal-specific scraper).
 # reliability_1to5: editorial judgement, used as a scoring input (evidence quality).
+#
+# Every URL marked active was probed live on 14 Sep 2026. Sources that failed
+# the probe are kept (active: false) with the reason, so the registry records
+# what's missing instead of silently shrinking.
+
+collection:
+  # Items older than this at collection time are skipped (Section 26: distinguish
+  # current from old). Undated items are kept — their age can't be judged.
+  lookback_days: 21
+
 sources:
   # --- A. India (core, daily) ---
   - id: dgft_notifications
@@ -15,6 +25,9 @@ sources:
     signal_type: early
     cadence: daily
     method: pagewatch
+    parse: table_rows
+    doc_label: Notification
+    authority: DGFT
     country: IN
     category: customs_dgft
     reliability_1to5: 5
@@ -22,11 +35,14 @@ sources:
 
   - id: dgft_trade_notices
     name: DGFT Trade Notices
-    url: https://www.dgft.gov.in/CP/?opt=trade-notices
+    url: https://www.dgft.gov.in/CP/?opt=trade-notice
     kind: primary
     signal_type: early
     cadence: daily
     method: pagewatch
+    parse: table_rows
+    doc_label: Trade Notice
+    authority: DGFT
     country: IN
     category: customs_dgft
     reliability_1to5: 5
@@ -39,6 +55,9 @@ sources:
     signal_type: confirm
     cadence: daily
     method: pagewatch
+    parse: table_rows
+    doc_label: Public Notice
+    authority: DGFT
     country: IN
     category: customs_dgft
     reliability_1to5: 5
@@ -54,7 +73,10 @@ sources:
     country: IN
     category: customs_cbic
     reliability_1to5: 5
-    active: true
+    active: false
+    notes: "Probe 14 Sep 2026: Angular single-page app (3 KB HTML shell) over a generic content API
+      (api/getContent...). Needs a dedicated collector against that API. TOP PRIORITY gap: CBIC
+      carries duty changes, ADD/CVD and safeguard notifications."
 
   - id: icegate_advisories
     name: ICEGATE Advisories
@@ -66,7 +88,8 @@ sources:
     country: IN
     category: customs_cbic
     reliability_1to5: 4
-    active: true
+    active: false
+    notes: "Probe 14 Sep 2026: connection refused. Re-test from the office network before building a parser."
 
   - id: rbi_press_releases
     name: RBI Press Releases (FEMA / master directions surface here first)
@@ -90,11 +113,14 @@ sources:
     country: IN
     category: trade_remedies
     reliability_1to5: 4
-    active: true
+    active: false
+    notes: "Probe 14 Sep 2026: 404 on this path, then connection timeouts on the site root. Find the
+      current case-listing URL; DGTR initiations are a core Draft Watch input."
 
-  - id: pib_commerce
-    name: PIB — Ministry of Commerce & Industry
-    url: "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=3"
+  - id: pib_english
+    name: PIB press releases (English) — trade, tariff, customs, export
+    url: https://news.google.com/rss/search
+    query: "site:pib.gov.in (export OR tariff OR customs OR trade)"
     kind: primary
     signal_type: early
     cadence: daily
@@ -103,18 +129,9 @@ sources:
     category: government_scheme
     reliability_1to5: 5
     active: true
-
-  - id: pib_finance
-    name: PIB — Ministry of Finance
-    url: "https://pib.gov.in/RssMain.aspx?ModId=8&Lang=1&Regid=3"
-    kind: primary
-    signal_type: early
-    cadence: daily
-    method: rss
-    country: IN
-    category: government_scheme
-    reliability_1to5: 5
-    active: true
+    notes: "PIB's own RSS (RssMain.aspx) returns Hindi titles for every ModId/Lang combination
+      tested on 14 Sep 2026, and the entity extractor is English-only. English releases are
+      located through a Google News site: query; every link resolves to pib.gov.in."
 
   - id: fieo
     name: FIEO (Federation of Indian Export Organisations)
@@ -145,7 +162,7 @@ sources:
 
   - id: wto_news
     name: WTO News
-    url: https://www.wto.org/english/news_e/rss_e.xml
+    url: https://www.wto.org/library/rss/latest_news_e.xml
     kind: primary
     signal_type: context
     cadence: daily
@@ -287,6 +304,33 @@ sources:
     active: true
     query: "DGFT notification OR customs notification India"
 
+  # Foreign-facing queries: the radar must not only watch Indian news (Section 3).
+  - id: google_news_foreign_remedies_on_india
+    name: Google News — trade remedies against Indian goods
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: INTL
+    category: trade_remedies
+    reliability_1to5: 3
+    active: true
+    query: "(anti-dumping OR countervailing OR safeguard) duty imports from India"
+
+  - id: google_news_eu_cbam_eudr_india
+    name: Google News — EU CBAM / EUDR and Indian exporters
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: EU
+    category: carbon_environment
+    reliability_1to5: 3
+    active: true
+    query: "(CBAM OR EUDR OR deforestation regulation) India exporters"
+
   - id: et_foreign_trade
     name: Economic Times — Foreign Trade
     url: https://economictimes.indiatimes.com/news/economy/foreign-trade/rssfeeds/1898055.cms
@@ -297,7 +341,9 @@ sources:
     country: IN
     category: news_confirmation
     reliability_1to5: 4
-    active: true
+    active: false
+    notes: "Probe 14 Sep 2026: feed returns a valid but empty channel (feed ID retired). ET coverage
+      still arrives through the Google News queries."
 
   - id: business_standard_economy
     name: Business Standard — Economy & Policy

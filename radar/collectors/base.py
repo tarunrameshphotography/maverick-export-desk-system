@@ -16,6 +16,13 @@ class RawItem:
     body_text: str = ""
     published_at: Optional[str] = None  # ISO 8601, may be None if unknown
     language: str = "en"
+    publisher: Optional[str] = None  # outlet domain when the URL is an aggregator link
+
+
+BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+    "Chrome/126.0 Safari/537.36 MaverickRadar/1.0"
+)
 
 
 class CollectorError(Exception):

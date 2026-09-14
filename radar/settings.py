@@ -48,6 +48,10 @@ def sources() -> list[dict]:
     return _load_yaml("sources.yaml")["sources"]
 
 
+def collection_config() -> dict:
+    return _load_yaml("sources.yaml").get("collection", {"lookback_days": 21})
+
+
 def categories() -> list[dict]:
     return _load_yaml("categories.yaml")["categories"]
 

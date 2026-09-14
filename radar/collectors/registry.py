@@ -4,6 +4,10 @@ One dead source must never stop the run (Section 29 debuggability / Section 32
 from __future__ import annotations
 
 import sqlite3
+from datetime import date
+from urllib.parse import urlsplit
+
+from dateutil import parser as dateparser
 
 from radar import settings
 from radar.collectors.base import CollectorError, RawItem, now_iso
@@ -36,18 +40,32 @@ def insert_raw_item(conn: sqlite3.Connection, item: RawItem) -> bool:
     ).fetchone()
     if existing:
         return False
+    publisher = item.publisher or urlsplit(canonical_url).netloc or None
     conn.execute(
         """
         INSERT INTO raw_items (source_id, url, canonical_url, title, body_text,
-                                published_at, collected_at, content_hash, language, status)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW')
+                                published_at, collected_at, content_hash, language, status, publisher)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'NEW', ?)
         """,
         (
             item.source_id, item.url, canonical_url, item.title, item.body_text,
-            item.published_at, now_iso(), content_hash, item.language,
+            item.published_at, now_iso(), content_hash, item.language, publisher,
         ),
     )
     return True
+
+
+def is_stale(item: RawItem, lookback_days: int, today: date | None = None) -> bool:
+    """True when the item is dated and older than the lookback window. Undated
+    items are never stale — their age can't be judged, so they're kept."""
+    if not item.published_at:
+        return False
+    try:
+        published = dateparser.parse(item.published_at)
+    except (ValueError, OverflowError):
+        return False
+    today = today or date.today()
+    return (today - published.date()).days > lookback_days
 
 
 def _collect_with_retries(collector, source: dict) -> list[RawItem]:
@@ -65,9 +83,11 @@ def run_collection(conn: sqlite3.Connection, run_id: int, use_sample: bool = Fal
     raw_items, and logs failures to source_failures. Returns summary counts
     used to populate system_runs."""
     sample_collector = SampleDataCollector()
+    lookback_days = settings.collection_config()["lookback_days"]
     sources_checked = 0
     items_collected = 0
     duplicates_found = 0
+    stale_skipped = 0
     errors: list[str] = []
 
     for source in _active_sources():
@@ -89,6 +109,11 @@ def run_collection(conn: sqlite3.Connection, run_id: int, use_sample: bool = Fal
             continue
 
         for item in raw_items:
+            # The sample fixture is a fixed scenario dated Aug-Sep 2026; freshness
+            # only applies to live collection.
+            if not use_sample and is_stale(item, lookback_days):
+                stale_skipped += 1
+                continue
             if insert_raw_item(conn, item):
                 items_collected += 1
             else:
@@ -99,5 +124,6 @@ def run_collection(conn: sqlite3.Connection, run_id: int, use_sample: bool = Fal
         "sources_checked": sources_checked,
         "items_collected": items_collected,
         "duplicates_found": duplicates_found,
+        "stale_skipped": stale_skipped,
         "errors": errors,
     }
