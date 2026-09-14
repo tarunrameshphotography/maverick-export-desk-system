@@ -135,14 +135,21 @@ class PagewatchCollector(Collector):
                 raise CollectorError(f"{source['id']}: no instrument rows found; page layout may have changed")
             return items
 
+        link_must_contain = source.get("link_must_contain")
         items: list[RawItem] = []
         seen_urls: set[str] = set()
         for href, text in parser.anchors:
             if not href or not text or len(text) < MIN_LINK_TEXT_LENGTH:
+                continue
+            if link_must_contain and link_must_contain not in href:
                 continue
             absolute_url = urljoin(url, href)
             if absolute_url in seen_urls:
                 continue
             seen_urls.add(absolute_url)
             items.append(RawItem(source_id=source["id"], title=text, url=absolute_url))
+        if link_must_contain and not items:
+            # A configured filter that matches nothing means the page's link
+            # structure changed, not that there's simply no news today.
+            raise CollectorError(f"{source['id']}: no links matching {link_must_contain!r}; page layout may have changed")
         return items

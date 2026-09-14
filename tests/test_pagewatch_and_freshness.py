@@ -66,6 +66,33 @@ def test_anchor_mode_still_filters_short_chrome(monkeypatch):
     assert [i.title for i in items] == ["Amendment in Para 2.93 of the Handbook of Procedures"]
 
 
+def test_anchor_mode_with_link_filter_keeps_only_matching_hrefs(monkeypatch):
+    # DGTR's case-listing page is mostly site navigation chrome; only links
+    # into /anti-dumping-cases/... are actual investigation records.
+    html = (
+        '<a href="/en/about-department">About the Department is a long enough link text</a>'
+        '<a href="/en/anti-dumping-cases/widgets-from-china">Anti-dumping investigation on Widgets from China</a>'
+    )
+    items = _collect(
+        monkeypatch, html,
+        {"id": "dgtr_cases", "url": "https://www.dgtr.gov.in/en/x", "parse": "anchors",
+         "link_must_contain": "/anti-dumping-cases/"},
+    )
+    assert len(items) == 1
+    assert items[0].title == "Anti-dumping investigation on Widgets from China"
+    assert items[0].url == "https://www.dgtr.gov.in/en/anti-dumping-cases/widgets-from-china"
+
+
+def test_anchor_mode_with_link_filter_and_zero_matches_is_a_failed_source(monkeypatch):
+    html = '<a href="/en/about-department">About the Department is a long enough link text</a>'
+    with pytest.raises(CollectorError, match="layout"):
+        _collect(
+            monkeypatch, html,
+            {"id": "dgtr_cases", "url": "https://www.dgtr.gov.in/en/x", "parse": "anchors",
+             "link_must_contain": "/anti-dumping-cases/"},
+        )
+
+
 def test_is_stale_respects_lookback_and_keeps_undated_items():
     today = date(2026, 9, 14)
     assert is_stale(RawItem("s", "t", "u", published_at="2026-08-01"), 21, today)

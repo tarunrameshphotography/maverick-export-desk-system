@@ -108,18 +108,22 @@ sources:
     active: true
 
   - id: dgtr_cases
-    name: DGTR Anti-Dumping / Safeguard Cases
-    url: https://www.dgtr.gov.in/anti-dumping-cases
+    name: DGTR Anti-Dumping Investigations in India
+    url: https://www.dgtr.gov.in/en/anti-dumping-investigation-in-india
     kind: primary
     signal_type: early
     cadence: weekly
     method: pagewatch
+    parse: anchors
+    link_must_contain: /anti-dumping-cases/
     country: IN
     category: trade_remedies
     reliability_1to5: 4
-    active: false
-    notes: "Probe 14 Sep 2026: 404 on this path, then connection timeouts on the site root. Find the
-      current case-listing URL; DGTR initiations are a core Draft Watch input."
+    active: true
+    notes: "14 Sep 2026: the old /anti-dumping-cases URL was simply stale (dgtr.gov.in restructured
+      under an /en/ locale prefix); the case listing is a Drupal page, not an SPA. It has no
+      per-row dates, so items are never treated as stale by lookback — dedup on content hash keeps
+      re-collection from duplicating. Found and verified live by browsing the current site."
 
   - id: pib_english
     name: PIB press releases (English) — trade, tariff, customs, export
