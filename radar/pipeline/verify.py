@@ -13,8 +13,14 @@ import re
 import sqlite3
 
 CLAIM_WORTHY_PATTERN = re.compile(
+    # numbers and money
     r"\d+(\.\d+)?\s*%|₹\s*\d|\$\s*\d|\bcrore\b|\bmillion\b|\bbillion\b|"
-    r"\beffective\b|\bnotified\b|\bextended\b|\bdeadline\b|\brate\b|\bw\.e\.f\.?\b",
+    # dates and timing
+    r"\beffective\b|\bnotified\b|\bextended\b|\bdeadline\b|\bw\.e\.f\.?\b|\binto effect\b|"
+    # rule statements (eligibility, validity, obligation, determinations) — Section 11's
+    # "laws, regulations, customs rules, eligibility, compliance" all need verifying
+    r"\brates?\b|\bvalid(?:ity)?\b|\btransfer(?:red|able)?\b|\beligib\w*|\bmandatory\b|\brequired\b|"
+    r"\bshall\b|\bprohibit\w*|\bwithdrawn\b|\bamend\w*|\bdetermin\w*|\bclarif\w*|\bsubstitut\w*",
     re.I,
 )
 VALID_CLAIM_TYPES = {"fact", "interpretation", "forecast", "opinion", "verify"}

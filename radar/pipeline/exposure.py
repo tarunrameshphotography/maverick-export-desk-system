@@ -34,6 +34,17 @@ THREAT_KEYWORDS = re.compile(
 COMPETITOR_POLICY_KEYWORDS = re.compile(
     r"\b(competitor|rival exporter|preferential tariff|graduation|gsp)\b", re.I
 )
+# Export incentive rates change the exporter's net realised price — the
+# spec's "changes price" exporter-impact test — even though no duty moves.
+INCENTIVE_PRICE_KEYWORDS = re.compile(
+    r"\b(rodtep|rosctl|duty drawback|export incentive|remission of duties)\b", re.I
+)
+CASH_CYCLE_KEYWORDS = re.compile(
+    r"\b(realisation period|realization period|export proceeds|payment terms|credit period|"
+    r"edpms|edf|set-off|repatriation)\b", re.I
+)
+# Instruments that apply to (nearly) every Indian exporter regardless of product.
+ECONOMY_WIDE_INSTRUMENTS = {"RoDTEP", "FEMA", "Duty Drawback"}
 ACTIONABLE_WINDOW_DAYS = 30
 
 
@@ -44,7 +55,9 @@ class IndianExposure:
     hs_codes: list[str] = field(default_factory=list)
     destination_markets: list[str] = field(default_factory=list)
     clusters: list[str] = field(default_factory=list)
+    breadth: str = "unknown"                 # "economy_wide" | "specific" | "unknown"
     landed_cost_change: str = "uncertain"
+    cash_cycle_change: str = "uncertain"
     market_access_change: str = "uncertain"
     compliance_cost_change: str = "uncertain"
     competitive_positioning_change: str = "uncertain"
@@ -100,16 +113,31 @@ def analyze_indian_exposure(
         direct_effect = "uncertain"
         notes.append("No country or product entity extracted; cannot assess exposure without more evidence.")
 
-    has_landed = bool(LANDED_COST_KEYWORDS.search(text))
+    has_duty = bool(LANDED_COST_KEYWORDS.search(text))
+    has_incentive_price = bool(INCENTIVE_PRICE_KEYWORDS.search(text))
+    has_landed = has_duty or has_incentive_price
+    if has_incentive_price and not has_duty:
+        notes.append("Export incentive rates change the exporter's net realised price (treated as a price effect).")
+    has_cash_cycle = bool(CASH_CYCLE_KEYWORDS.search(text))
     has_market_access = bool(MARKET_ACCESS_KEYWORDS.search(text))
     has_compliance = bool(COMPLIANCE_COST_KEYWORDS.search(text))
     has_opportunity = bool(OPPORTUNITY_KEYWORDS.search(text))
     has_threat = bool(THREAT_KEYWORDS.search(text))
     has_competitor_signal = bool(COMPETITOR_POLICY_KEYWORDS.search(text)) and len(countries) >= 2
 
-    any_regulatory_evidence = has_landed or has_market_access or has_compliance
+    any_regulatory_evidence = has_landed or has_market_access or has_compliance or has_cash_cycle
+
+    instruments = schemes | {e["normalized_value"] for e in entities if e["entity_type"] == "regulation"}
+    if direct_effect == "true" and instruments & ECONOMY_WIDE_INSTRUMENTS:
+        breadth = "economy_wide"
+        notes.append(f"{', '.join(sorted(instruments & ECONOMY_WIDE_INSTRUMENTS))} applies to exporters across products.")
+    elif hs_codes or clusters:
+        breadth = "specific"
+    else:
+        breadth = "unknown"
 
     landed_cost_change = _tribool(has_landed, any_regulatory_evidence)
+    cash_cycle_change = _tribool(has_cash_cycle, any_regulatory_evidence)
     market_access_change = _tribool(has_market_access, any_regulatory_evidence)
     compliance_cost_change = _tribool(has_compliance, any_regulatory_evidence)
     competitive_positioning_change = _tribool(has_competitor_signal, len(countries) >= 2)
@@ -135,7 +163,7 @@ def analyze_indian_exposure(
         notes.append("No effective/deadline date extracted — cannot judge this-week actionability.")
 
     evidence_signals = sum(
-        [india_authority_hit, india_scheme_hit, india_mentioned, has_landed, has_market_access,
+        [india_authority_hit, india_scheme_hit, india_mentioned, has_landed or has_cash_cycle, has_market_access,
          has_compliance, bool(hs_codes), bool(clusters), bool(deadline_entities)]
     )
     confidence = min(1.0, evidence_signals / 6)
@@ -146,7 +174,9 @@ def analyze_indian_exposure(
         hs_codes=hs_codes,
         destination_markets=destination_markets,
         clusters=clusters,
+        breadth=breadth,
         landed_cost_change=landed_cost_change,
+        cash_cycle_change=cash_cycle_change,
         market_access_change=market_access_change,
         compliance_cost_change=compliance_cost_change,
         competitive_positioning_change=competitive_positioning_change,

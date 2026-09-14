@@ -69,33 +69,63 @@ def entity_overlap(entities_a: list[dict], entities_b: list[dict]) -> float:
     return len(set_a & set_b) / len(set_a | set_b)
 
 
+def _entities(item: dict) -> list[dict]:
+    if "_entities" not in item:
+        item["_entities"] = extract_entities(item["title"] + " " + (item.get("body_text") or ""))
+    return item["_entities"]
+
+
+def _values(entities: list[dict], types: tuple[str, ...]) -> set[str]:
+    return {e["normalized_value"] for e in entities if e["entity_type"] in types}
+
+
+DOC_REF_PREFIXES = ("Notification ", "Federal Register ", "Trade Notice ", "Public Notice ")
+
+
+def same_event_by_strong_key(item_a: dict, item_b: dict) -> bool:
+    """Two items describe the same underlying event if they cite the same
+    notification / document number, or name the same instrument AND the same
+    specific date (e.g. RoDTEP + 2026-09-30). Headlines about one notification
+    are often worded too differently for title similarity to catch."""
+    ent_a, ent_b = _entities(item_a), _entities(item_b)
+    refs_a = {v for v in _values(ent_a, ("regulation",)) if v.startswith(DOC_REF_PREFIXES)}
+    refs_b = {v for v in _values(ent_b, ("regulation",)) if v.startswith(DOC_REF_PREFIXES)}
+    if refs_a & refs_b:
+        return True
+    instruments = ("scheme", "regulation", "trade_agreement")
+    shared_instrument = (_values(ent_a, instruments) - refs_a) & (_values(ent_b, instruments) - refs_b)
+    dates = ("date", "effective_date", "deadline")
+    shared_date = _values(ent_a, dates) & _values(ent_b, dates)
+    return bool(shared_instrument and shared_date)
+
+
 def similarity_score(item_a: dict, item_b: dict) -> float:
-    """Combined score in [0, 1]. Title similarity carries most of the weight;
-    entity overlap is a secondary confirming signal; dates outside the window
-    veto a match outright regardless of text similarity."""
+    """Combined score in [0, 1]. A strong-key match (same document, or same
+    instrument + same date) scores 1.0; otherwise title similarity carries most
+    of the weight with entity overlap confirming. Dates outside the window veto
+    a match outright."""
     if not _within_date_window(item_a.get("published_at"), item_b.get("published_at")):
         return 0.0
+    if same_event_by_strong_key(item_a, item_b):
+        return 1.0
     title_sim = title_similarity(item_a["title"], item_b["title"])
-    ent_a = extract_entities(item_a["title"] + " " + (item_a.get("body_text") or ""))
-    ent_b = extract_entities(item_b["title"] + " " + (item_b.get("body_text") or ""))
-    entity_sim = entity_overlap(ent_a, ent_b)
+    entity_sim = entity_overlap(_entities(item_a), _entities(item_b))
     return 0.7 * title_sim + 0.3 * entity_sim
 
 
 def cluster_raw_items(raw_items: list[dict], threshold: float = TITLE_SIMILARITY_THRESHOLD) -> list[list[dict]]:
-    """Greedy single-link clustering: each item joins the first cluster whose
-    representative (its first member) it's similar enough to, else starts a
-    new cluster. Deterministic given a stable input order."""
+    """Greedy single-link clustering: an item joins the first cluster containing
+    *any* member it is similar enough to, else starts a new cluster.
+    Deterministic given a stable input order."""
     clusters: list[list[dict]] = []
     for item in raw_items:
-        placed = False
-        for cluster in clusters:
-            if similarity_score(item, cluster[0]) >= threshold:
-                cluster.append(item)
-                placed = True
-                break
-        if not placed:
+        home = next(
+            (c for c in clusters if any(similarity_score(item, member) >= threshold for member in c)), None
+        )
+        if home is None:
             clusters.append([item])
+        else:
+            home.append(item)
     return clusters
 
 
@@ -106,21 +136,33 @@ def create_signal_for_cluster(conn: sqlite3.Connection, cluster: list[dict], now
     seq = next_sequence(conn, f"signal_{year}")
     signal_id = f"SIG-{year}-{seq:04d}"
 
-    representative = min(
-        cluster, key=lambda i: i.get("published_at") or "9999"
-    )  # earliest-published item names the signal and its primary source
+    kinds = {
+        r["id"]: r["kind"] for r in conn.execute("SELECT id, kind FROM sources").fetchall()
+    }
+    # Section 11: never let a secondary article stand in for the primary
+    # document when we have it. The earliest primary item names the signal;
+    # with no primary item, the earliest item does.
+    primaries = [i for i in cluster if kinds.get(i["source_id"]) == "primary"]
+    representative = min(primaries or cluster, key=lambda i: i.get("published_at") or "9999")
+    doc_refs = sorted({
+        e["normalized_value"] for i in cluster for e in _entities(i)
+        if e["entity_type"] == "regulation" and e["normalized_value"].startswith(DOC_REF_PREFIXES)
+    })
+    earliest = min((i.get("published_at") for i in cluster if i.get("published_at")), default=None)
     conn.execute(
         """
-        INSERT INTO signals (id, title, first_seen_at, source_published_at,
-                              primary_source_url, status, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, 'TRIAGED', ?, ?)
+        INSERT INTO signals (id, title, first_seen_at, source_published_at, primary_source_url,
+                              primary_doc_ref, lifecycle_stage, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'TRIAGED', ?, ?)
         """,
         (
             signal_id,
             representative["title"],
             now_iso,
-            representative.get("published_at"),
+            earliest,
             representative.get("canonical_url") or representative.get("url"),
+            "; ".join(doc_refs) or None,
+            "notified" if primaries else "reported",
             now_iso,
             now_iso,
         ),

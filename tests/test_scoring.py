@@ -42,21 +42,89 @@ def test_gate2_fails_without_indian_implication(conn):
     assert "G2_indian_implication" in result.failed_gates
 
 
-def test_gate3_fails_on_exact_repeat_within_window(conn):
+def _rodtep_entity(conn, signal_id):
+    conn.execute(
+        "INSERT INTO signal_entities (signal_id, entity_type, raw_value, normalized_value, confidence) "
+        "VALUES (?, 'scheme', 'rodtep', 'RoDTEP', 1.0)",
+        (signal_id,),
+    )
+
+
+def _publish(conn, signal_id, published_at):
+    draft = conn.execute(
+        "INSERT INTO content_drafts (signal_id, channel, status, created_at) VALUES (?, 'linkedin', 'approved', ?)",
+        (signal_id, published_at),
+    ).lastrowid
+    conn.execute(
+        "INSERT INTO published_content (draft_id, channel, published_at, url, status) VALUES (?, 'linkedin', ?, 'u', 'published')",
+        (draft, published_at),
+    )
+    conn.commit()
+
+
+def test_gate3_fails_when_we_published_the_same_story_within_14_days(conn):
     _insert_signal(conn, "SIG-TEST-0004", topic_category="incentives", created_at="2026-09-01T00:00:00")
-    conn.execute(
-        "INSERT INTO signal_entities (signal_id, entity_type, raw_value, normalized_value, confidence) "
-        "VALUES ('SIG-TEST-0004', 'scheme', 'rodtep', 'RoDTEP', 1.0)"
-    )
+    _rodtep_entity(conn, "SIG-TEST-0004")
+    _publish(conn, "SIG-TEST-0004", "2026-09-02T11:00:00")
     _insert_signal(conn, "SIG-TEST-0005", topic_category="incentives", created_at="2026-09-10T00:00:00")
-    conn.execute(
-        "INSERT INTO signal_entities (signal_id, entity_type, raw_value, normalized_value, confidence) "
-        "VALUES ('SIG-TEST-0005', 'scheme', 'rodtep', 'RoDTEP', 1.0)"
-    )
+    _rodtep_entity(conn, "SIG-TEST-0005")
     conn.commit()
     exposure = IndianExposure(direct_effect="true")
     result = evaluate_gates(conn, "SIG-TEST-0005", exposure, has_primary_source=True, secondary_source_count=0, text="")
     assert "G3_repeat" in result.failed_gates
+
+
+def test_gate3_ignores_similar_signals_we_never_published(conn):
+    # "Covered" means published by Maverick Minds, not merely seen by the collector.
+    _insert_signal(conn, "SIG-TEST-0012", topic_category="incentives", created_at="2026-09-09T00:00:00")
+    _rodtep_entity(conn, "SIG-TEST-0012")
+    _insert_signal(conn, "SIG-TEST-0013", topic_category="incentives", created_at="2026-09-10T00:00:00")
+    _rodtep_entity(conn, "SIG-TEST-0013")
+    conn.commit()
+    result = evaluate_gates(conn, "SIG-TEST-0013", IndianExposure(direct_effect="true"), True, 0, "")
+    assert "G3_repeat" not in result.failed_gates
+
+
+def test_gate3_allows_repeat_after_the_14_day_window(conn):
+    _insert_signal(conn, "SIG-TEST-0014", topic_category="incentives", created_at="2026-08-01T00:00:00")
+    _rodtep_entity(conn, "SIG-TEST-0014")
+    _publish(conn, "SIG-TEST-0014", "2026-08-01T11:00:00")
+    _insert_signal(conn, "SIG-TEST-0015", topic_category="incentives", created_at="2026-09-10T00:00:00")
+    _rodtep_entity(conn, "SIG-TEST-0015")
+    conn.commit()
+    result = evaluate_gates(conn, "SIG-TEST-0015", IndianExposure(direct_effect="true"), True, 0, "")
+    assert "G3_repeat" not in result.failed_gates
+
+
+def test_near_repeat_penalty_applies_within_90_days_of_a_related_post(conn):
+    _insert_signal(conn, "SIG-TEST-0016", topic_category="incentives", created_at="2026-07-01T00:00:00")
+    _rodtep_entity(conn, "SIG-TEST-0016")
+    _publish(conn, "SIG-TEST-0016", "2026-07-01T11:00:00")
+    _insert_signal(conn, "SIG-TEST-0017", topic_category="countervailing_duty", created_at="2026-09-10T00:00:00")
+    _rodtep_entity(conn, "SIG-TEST-0017")
+    conn.commit()
+    _, applied = compute_penalties(conn, "SIG-TEST-0017", "DGFT notified rates", False)
+    assert "near_repeat" in applied
+
+
+def test_formula_reproduces_the_specs_worked_scores():
+    """content_scoring_model.md 'Worked scoring' table: same criterion scores in,
+    same base score out. Guards the formula and the configured weights."""
+    order = ["exporter_impact", "actionability", "angle_strength", "indian_exposure", "under_coverage",
+             "time_sensitivity", "explainability", "audience_fit", "evidence_quality"]
+    worked = {
+        "RoDTEP/RoSCTL extension": ([5, 4, 4, 5, 3, 5, 4, 5, 5], 88.0),
+        "FEMA 2026": ([4, 5, 4, 5, 4, 5, 4, 4, 4], 87.4),
+        "US CVD oleoresin paprika": ([3, 3, 5, 2, 5, 3, 3, 3, 5], 70.4),
+        "Hormuz freight": ([4, 3, 3, 4, 2, 4, 3, 3, 3], 66.0),
+        "Hormuz + Incoterm angle": ([4, 5, 5, 4, 2, 4, 3, 3, 3], 78.0),
+        "August trade data": ([2, 1, 2, 4, 1, 4, 4, 3, 5], 49.8),
+    }
+    for name, (scores, expected) in worked.items():
+        assert compute_base_score(dict(zip(order, map(float, scores)))) == expected, name
+    # Hormuz final: base x 0.85 (secondary) - 5 (sensitivity) = 51 in the spec
+    assert round(66.0 * 0.85 - 5) == 51
+    assert decide(51) == "watchlist" and decide(61) == "secondary" and decide(88) == "lead"
 
 
 def test_gate4_fails_on_unverifiable_numeric_claim(conn):

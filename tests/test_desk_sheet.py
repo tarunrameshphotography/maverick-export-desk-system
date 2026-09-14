@@ -75,6 +75,25 @@ def test_render_desk_sheet_markdown_has_all_section_headers(conn):
         assert header in markdown
 
 
+def test_lead_card_carries_every_section_16a_field(conn):
+    _seeded_conn(conn)
+    card = assemble_desk_sheet(conn, reference_date=date(2026, 9, 14))["lead_card"]
+    for field in ("title", "why_it_matters", "countries", "products", "exposure", "sources",
+                  "score", "angle", "franchise", "format", "coverage"):
+        assert field in card
+    assert "India" in card["countries"]
+    assert card["sources"]  # at least the cluster's own sources are named
+    markdown = render_desk_sheet_markdown(assemble_desk_sheet(conn, reference_date=date(2026, 9, 14)))
+    assert "Why it matters:" in markdown and "Franchise / format:" in markdown
+
+
+def test_rodtep_lead_is_flagged_for_disclosure_on_the_sheet(conn):
+    _seeded_conn(conn)
+    data = assemble_desk_sheet(conn, reference_date=date(2026, 9, 14))
+    rodtep_cards = [c for c in [data["lead_card"], *data["backup_cards"]] if "RoDTEP" in c["instruments"]]
+    assert rodtep_cards and all(c["disclosure"] for c in rodtep_cards)
+
+
 def test_render_desk_sheet_handles_no_lead_gracefully(conn):
     data = assemble_desk_sheet(conn, reference_date=date(2026, 9, 14))
     markdown = render_desk_sheet_markdown(data)

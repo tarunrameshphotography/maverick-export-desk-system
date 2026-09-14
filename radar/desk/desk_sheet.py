@@ -3,6 +3,7 @@ needs to answer "what should we publish today?" in a few minutes, from
 whatever the pipeline has already scored — it reads, it never re-scores."""
 from __future__ import annotations
 
+import json
 import sqlite3
 from datetime import date, datetime, timedelta
 
@@ -120,6 +121,78 @@ def suggested_action(signal_row: dict, verification: dict | None) -> str:
     return "Hold on Watchlist until a new development or verification closes the gap."
 
 
+_EXPOSURE_LABELS = [
+    ("landed_cost_change", "changes price or landed cost"),
+    ("cash_cycle_change", "changes the cash cycle"),
+    ("market_access_change", "changes market access"),
+    ("compliance_cost_change", "adds compliance cost"),
+    ("competitive_positioning_change", "shifts competitive position"),
+    ("opportunity", "opens an opportunity"),
+    ("threat", "creates a threat"),
+    ("actionable_this_week", "has a date inside 30 days"),
+]
+
+
+def signal_card(conn: sqlite3.Connection, signal: dict) -> dict:
+    """Everything Section 16A asks for about one candidate, drawn only from
+    what the pipeline already stored — no new inference happens here."""
+    exposure = IndianExposure.from_json(signal["exposure_json"]) if signal.get("exposure_json") else IndianExposure()
+    why = [label for key, label in _EXPOSURE_LABELS if getattr(exposure, key) == "true"]
+    unknown = [label for key, label in _EXPOSURE_LABELS if getattr(exposure, key) == "uncertain"]
+
+    sources = conn.execute(
+        """
+        SELECT s.name, s.kind, ri.canonical_url FROM raw_items ri JOIN sources s ON s.id = ri.source_id
+        WHERE ri.signal_id = ? ORDER BY s.kind, s.reliability_1to5 DESC
+        """,
+        (signal["id"],),
+    ).fetchall()
+    selected = conn.execute(
+        "SELECT franchise, angle_label FROM analyses WHERE signal_id = ? AND selected = 1", (signal["id"],)
+    ).fetchone()
+    rules = settings.content_rules()
+    franchise = selected["franchise"] if selected else rules["franchise_by_category"].get(
+        signal["topic_category"], rules["franchise_by_category"]["default"]
+    )
+    schemes = [r["normalized_value"] for r in conn.execute(
+        "SELECT DISTINCT normalized_value FROM signal_entities WHERE signal_id = ? AND entity_type IN ('scheme','regulation','authority')",
+        (signal["id"],),
+    ).fetchall()]
+    breakdown = json.loads(signal["score_breakdown_json"]) if signal.get("score_breakdown_json") else {}
+
+    return {
+        "id": signal["id"],
+        "title": signal["title"],
+        "why_it_matters": (", ".join(why) if why else "no concrete effect established yet"),
+        "unknowns": unknown,
+        "countries": ["India"] * (exposure.direct_effect == "true") + exposure.destination_markets,
+        "products": exposure.clusters + [f"HS {h}" for h in exposure.hs_codes],
+        "category": signal["topic_category"],
+        "instruments": schemes,
+        "exposure": f"direct effect: {exposure.direct_effect}; confidence {exposure.confidence}",
+        "exposure_notes": exposure.notes,
+        "sources": [f"{r['name']} ({r['kind']})" for r in sources],
+        "primary_source_url": signal["primary_source_url"],
+        "score": signal["score_final"],
+        "score_detail": (
+            f"base {breakdown.get('base_score')} x {breakdown.get('confidence_mult')} "
+            f"- penalties {breakdown.get('penalties_total')} {breakdown.get('penalties_applied') or ''}".strip()
+        ),
+        "decision": signal["decision"],
+        "coverage": f"{signal.get('saturation_label') or 'unknown'} ({signal.get('saturation_count_72h') or 0} matching items / 72h)",
+        "angle": selected["angle_label"] if selected else "pending — run `python -m radar angle-brief " + signal["id"] + "`",
+        "franchise": franchise + ("" if selected else " (default for category — confirm in angle step)"),
+        "format": rules["franchise_format"].get(franchise, "Text"),
+        "disclosure": _needs_disclosure(conn, signal["id"]),
+    }
+
+
+def _needs_disclosure(conn: sqlite3.Connection, signal_id: str) -> bool:
+    from radar.content.drafts import disclosure_required
+
+    return disclosure_required(conn, signal_id)
+
+
 def assemble_desk_sheet(conn: sqlite3.Connection, reference_date: date | None = None) -> dict:
     reference_date = reference_date or date.today()
     lead, backups = get_lead_and_backups(conn)
@@ -135,8 +208,10 @@ def assemble_desk_sheet(conn: sqlite3.Connection, reference_date: date | None = 
     return {
         "date": reference_date.isoformat(),
         "lead": lead,
+        "lead_card": signal_card(conn, lead) if lead else None,
         "lead_action": suggested_action(lead, blocker_by_id.get(lead["id"])) if lead else None,
         "backups": backups,
+        "backup_cards": [signal_card(conn, b) for b in backups],
         "watchlist": watchlist,
         "verification_blockers": blockers,
         "upcoming_deadlines": deadlines,
@@ -144,28 +219,44 @@ def assemble_desk_sheet(conn: sqlite3.Connection, reference_date: date | None = 
     }
 
 
+def _render_card(card: dict, action: str | None = None) -> list[str]:
+    lines = [
+        f"**{card['title']}**",
+        f"- Signal: `{card['id']}` · score **{card['score']}** ({card['decision']}) — {card['score_detail']}",
+        f"- Why it matters: {card['why_it_matters']}",
+        f"- Countries: {', '.join(card['countries']) or 'none extracted'}",
+        f"- Products / sector: {', '.join(card['products']) or 'none extracted'} · category `{card['category']}`",
+        f"- Instruments: {', '.join(card['instruments']) or 'none extracted'}",
+        f"- Indian exposure: {card['exposure']}",
+        f"- Coverage: {card['coverage']}",
+        f"- Sources: {'; '.join(card['sources'])}",
+        f"- Primary link: {card['primary_source_url'] or 'not recorded'}",
+        f"- Suggested angle: {card['angle']}",
+        f"- Franchise / format: {card['franchise']} — {card['format']}",
+    ]
+    if card["unknowns"]:
+        lines.append(f"- Not yet established: {', '.join(card['unknowns'])}")
+    if card["disclosure"]:
+        lines.append("- **Disclosure required** (RoDTEP/RoSCTL/scrip) · red risk tier")
+    if action:
+        lines.append(f"- Next step: {action}")
+    return lines
+
+
 def render_desk_sheet_markdown(data: dict) -> str:
     lines = [f"# MAVERICK MORNING DESK — {data['date']}", ""]
 
     lines.append("## A. Top signal")
     if data["lead"]:
-        s = data["lead"]
-        lines += [
-            f"**{s['title']}**",
-            f"- Signal ID: {s['id']}",
-            f"- Score: {s['score_final']} ({s['decision']})",
-            f"- Category: {s['topic_category']}",
-            f"- Primary source: {s['primary_source_url'] or 'not recorded'}",
-            f"- Suggested action: {data['lead_action']}",
-        ]
+        lines += _render_card(data["lead_card"], data["lead_action"])
     else:
         lines.append("_No signal cleared the gates today._")
     lines.append("")
 
     lines.append("## B. Backup signals")
-    if data["backups"]:
-        for s in data["backups"]:
-            lines.append(f"- {s['id']} — {s['title']} (score {s['score_final']}, {s['decision']})")
+    if data["backup_cards"]:
+        for card in data["backup_cards"]:
+            lines += _render_card(card) + [""]
     else:
         lines.append("_No backups available._")
     lines.append("")
@@ -206,12 +297,32 @@ def render_desk_sheet_markdown(data: dict) -> str:
     lines.append("## G. Suggested action")
     lines.append(data["lead_action"] or "No lead today — review the Watchlist for tomorrow's candidates.")
 
+    health = data.get("run_health")
+    if health:
+        lines += [
+            "",
+            "## Run health",
+            f"- Sources checked: {health['sources_checked']} · new items: {health['items_collected']} · "
+            f"already-seen items: {health['duplicates_found']} · failed sources: {len(health['errors'])}",
+        ]
+        for err in health["errors"]:
+            lines.append(f"  - {err[:200]}")
+        lines.append("- Model calls: 0 (hybrid mode — triage and scoring are rule-based)")
+
+    lines += ["", "---", "_Nothing in this sheet has been published. Every item needs human selection, "
+              "verification and approval (Section 30)._"]
     return "\n".join(lines)
 
 
-def write_desk_sheet(conn: sqlite3.Connection, reference_date: date | None = None) -> tuple[dict, str]:
+def write_desk_sheet(
+    conn: sqlite3.Connection,
+    reference_date: date | None = None,
+    suffix: str = "",
+    run_health: dict | None = None,
+) -> tuple[dict, str]:
     data = assemble_desk_sheet(conn, reference_date)
+    data["run_health"] = run_health
     markdown = render_desk_sheet_markdown(data)
-    path = settings.DESK_SHEETS_DIR / f"{data['date']}.md"
+    path = settings.DESK_SHEETS_DIR / f"{data['date']}{suffix}.md"
     path.write_text(markdown, encoding="utf-8")
     return data, str(path)

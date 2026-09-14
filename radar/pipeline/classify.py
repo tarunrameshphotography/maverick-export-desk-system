@@ -35,15 +35,21 @@ _VALID_CATEGORY_IDS = {
 }
 
 
+# Most specific wins. A US CVD case that *mentions* RoDTEP is a trade-remedy
+# story, not an incentives story; a DGFT notice about RoDTEP is an incentives
+# story, not a generic DGFT story.
+CATEGORY_PRIORITY = [
+    "countervailing_duty", "anti_dumping", "safeguards", "carbon_environment", "sps_food_alert",
+    "tariffs", "trade_agreements", "fx_payments", "incentives", "trade_remedies",
+    "customs_cbic", "customs_dgft",
+]
+
+
 def classify_topic_category(entities: list[dict]) -> str:
-    """First entity (in extraction order) whose normalized value maps to a
-    category wins — entities.py already orders scheme/authority hits before
-    generic ones, so a scheme-specific category (e.g. 'incentives') is
-    preferred over a generic authority category (e.g. 'customs_dgft') when
-    both are present in the same signal."""
-    for entity in entities:
-        category = CATEGORY_BY_ENTITY_VALUE.get(entity.get("normalized_value", ""))
-        if category:
+    found = {CATEGORY_BY_ENTITY_VALUE[e["normalized_value"]]
+             for e in entities if e.get("normalized_value") in CATEGORY_BY_ENTITY_VALUE}
+    for category in CATEGORY_PRIORITY:
+        if category in found:
             assert category in _VALID_CATEGORY_IDS
             return category
     return "uncategorised"

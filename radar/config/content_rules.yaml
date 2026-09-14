@@ -44,6 +44,28 @@ risk_tier_by_category:
           competitor_policy]
   # anything else defaults to green
 
+# Desk Sheet's *default* franchise suggestion before the Angle Engine runs
+# (content_architecture.md). A starting point for the human, not a decision.
+franchise_by_category:
+  incentives: Countdown
+  customs_dgft: The Fine Print
+  customs_cbic: The Fine Print
+  fx_payments: The Fine Print
+  countervailing_duty: Second Order
+  anti_dumping: Second Order
+  trade_remedies: Second Order
+  safeguards: Second Order
+  tariffs: Second Order
+  competitor_policy: Second Order
+  trade_agreements: Headline vs Reality
+  rules_of_origin: Headline vs Reality
+  tbt_sps: Draft Watch
+  product_standards: Draft Watch
+  sps_food_alert: Rejection Watch
+  shipping_logistics: Freight Pulse
+  trade_statistics: The Number
+  default: News-pegged explainer
+
 franchise_format:
   The Fine Print: "Text + annotated document image"
   Second Order: "Carousel with an exposure chart"

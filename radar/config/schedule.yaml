@@ -1,0 +1,15 @@
+# Run schedule (Section 27 / daily_research_system.md "The day at the Desk", IST).
+# Times are local machine time. Change them here; re-run `python -m radar schedule --install`.
+runs:
+  - name: MaverickRadar_Overnight
+    mode: overnight      # collect only: overnight US/EU publications, late DGFT/CBIC uploads
+    time: "05:30"
+  - name: MaverickRadar_Morning
+    mode: morning        # collect + dedupe + score + claims scaffolding + Desk Sheet
+    time: "06:30"
+  - name: MaverickRadar_Afternoon
+    mode: evening        # second sweep: afternoon DGFT/CBIC uploads, EU morning publications
+    time: "16:00"
+  - name: MaverickRadar_Evening
+    mode: evening        # late DGFT/CBIC check; refreshes the Watchlist for tomorrow
+    time: "21:00"

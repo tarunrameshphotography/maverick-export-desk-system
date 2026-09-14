@@ -49,54 +49,51 @@ def evaluate_gates(
     return GateResult(passed=not failed, failed_gates=failed)
 
 
-def _signal_scheme_authority_entities(conn: sqlite3.Connection, signal_id: str) -> set[str]:
+def _instrument_entities(conn: sqlite3.Connection, signal_id: str) -> set[str]:
     rows = conn.execute(
-        "SELECT normalized_value FROM signal_entities WHERE signal_id = ? AND entity_type IN ('scheme', 'authority')",
+        "SELECT normalized_value FROM signal_entities WHERE signal_id = ? "
+        "AND entity_type IN ('scheme', 'regulation', 'trade_agreement')",
         (signal_id,),
     ).fetchall()
     return {r["normalized_value"] for r in rows}
 
 
-def _is_exact_repeat(conn: sqlite3.Connection, signal_id: str, window_days: int) -> bool:
-    this_signal = conn.execute("SELECT topic_category, created_at FROM signals WHERE id = ?", (signal_id,)).fetchone()
-    if this_signal is None:
-        return False
-    this_entities = _signal_scheme_authority_entities(conn, signal_id)
-    if not this_entities:
-        return False
-
-    candidates = conn.execute(
+def _published_signals_in_window(conn: sqlite3.Connection, signal_id: str, window_days: int) -> list[sqlite3.Row]:
+    """'Covered' means *published by Maverick Minds* (Part 12 G3; automation_architecture.md
+    'similarity search against the last 90 days of posts') — not merely collected."""
+    ref = conn.execute("SELECT created_at FROM signals WHERE id = ?", (signal_id,)).fetchone()
+    if ref is None:
+        return []
+    return conn.execute(
         """
-        SELECT id FROM signals
-        WHERE id != ? AND topic_category = ?
-        AND julianday(?) - julianday(created_at) BETWEEN 0 AND ?
+        SELECT DISTINCT s.id, s.topic_category
+        FROM published_content pc
+        JOIN content_drafts cd ON cd.id = pc.draft_id
+        JOIN signals s ON s.id = cd.signal_id
+        WHERE pc.status IN ('published', 'corrected') AND s.id != ?
+          AND julianday(?) - julianday(pc.published_at) BETWEEN 0 AND ?
         """,
-        (signal_id, this_signal["topic_category"], this_signal["created_at"], window_days),
+        (signal_id, ref["created_at"], window_days),
     ).fetchall()
-    for row in candidates:
-        other_entities = _signal_scheme_authority_entities(conn, row["id"])
-        if other_entities and other_entities == this_entities:
+
+
+def _is_exact_repeat(conn: sqlite3.Connection, signal_id: str, window_days: int) -> bool:
+    this = conn.execute("SELECT topic_category FROM signals WHERE id = ?", (signal_id,)).fetchone()
+    this_entities = _instrument_entities(conn, signal_id)
+    if this is None or not this_entities:
+        return False
+    for row in _published_signals_in_window(conn, signal_id, window_days):
+        if row["topic_category"] == this["topic_category"] and _instrument_entities(conn, row["id"]) == this_entities:
             return True
     return False
 
 
 def _has_near_repeat(conn: sqlite3.Connection, signal_id: str, window_days: int) -> bool:
-    this_signal = conn.execute("SELECT created_at FROM signals WHERE id = ?", (signal_id,)).fetchone()
-    if this_signal is None:
-        return False
-    this_entities = _signal_scheme_authority_entities(conn, signal_id)
+    this_entities = _instrument_entities(conn, signal_id)
     if not this_entities:
         return False
-    candidates = conn.execute(
-        """
-        SELECT id FROM signals
-        WHERE id != ? AND julianday(?) - julianday(created_at) BETWEEN 0 AND ?
-        """,
-        (signal_id, this_signal["created_at"], window_days),
-    ).fetchall()
-    for row in candidates:
-        other_entities = _signal_scheme_authority_entities(conn, row["id"])
-        if other_entities and (other_entities & this_entities) and other_entities != this_entities:
+    for row in _published_signals_in_window(conn, signal_id, window_days):
+        if _instrument_entities(conn, row["id"]) & this_entities:
             return True
     return False
 
@@ -116,7 +113,8 @@ def score_criteria(
 ) -> dict[str, float]:
     """Returns {criterion_id: score_0_to_5} for every criterion in config."""
     impact_hits = sum(
-        1 for v in (exposure.landed_cost_change, exposure.market_access_change, exposure.compliance_cost_change)
+        1 for v in (exposure.landed_cost_change, exposure.cash_cycle_change,
+                    exposure.market_access_change, exposure.compliance_cost_change)
         if v == "true"
     )
     impact_hits += 1 if exposure.threat == "true" or exposure.opportunity == "true" else 0
@@ -128,14 +126,17 @@ def score_criteria(
 
     angle_strength = 4 if angle_selected else (3 if angle_exists else 2)
 
-    breadth = len(exposure.destination_markets) + len(exposure.clusters) + len(exposure.hs_codes)
-    indian_exposure = min(5, (2 if exposure.direct_effect == "true" else 0) + min(3, breadth))
+    # Part 12: 5 = "many exporters, or clearly named HS lines and clusters".
+    named = len(exposure.destination_markets) + len(exposure.clusters) + len(exposure.hs_codes)
+    breadth_points = 3 if exposure.breadth == "economy_wide" else min(3, named)
+    indian_exposure = min(5, (2 if exposure.direct_effect == "true" else 0) + breadth_points)
 
     under_coverage = saturation_score_0to5
 
-    explainability = 4 if entity_count <= 4 else (2 if entity_count > 9 else 3)
+    explainability = 4 if entity_count <= 6 else (2 if entity_count > 12 else 3)
 
-    audience_fit = 5 if exposure.clusters else (3 if exposure.direct_effect == "true" else 1)
+    core_segment = bool(exposure.clusters) or exposure.breadth == "economy_wide"
+    audience_fit = 5 if core_segment else (3 if exposure.direct_effect == "true" else 1)
 
     evidence_quality = 5 if has_primary_source else (3 if secondary_source_count >= 2 else 1)
 
@@ -174,7 +175,7 @@ def compute_penalties(conn: sqlite3.Connection, signal_id: str, text: str, has_f
         total += cfg["speculation_min"]
         applied.append("speculation")
 
-    if _has_near_repeat(conn, signal_id, 14):
+    if _has_near_repeat(conn, signal_id, cfg["near_repeat_window_days"]):
         total += cfg["near_repeat"]
         applied.append("near_repeat")
 
@@ -242,20 +243,50 @@ def score_signal(
         "decision": decision,
     }
 
+    current_status = conn.execute("SELECT status FROM signals WHERE id = ?", (signal_id,)).fetchone()["status"]
+    first_scoring = current_status == "TRIAGED"
+    # Rescoring (after verification or angle selection) updates the numbers but
+    # never moves a signal a human has already advanced through the workflow.
+    new_status = (
+        ("WATCHLIST" if decision == "watchlist" else "REJECTED" if decision == "discard" else "SCORED")
+        if first_scoring else current_status
+    )
+    previously_covered = int("G3_repeat" in gate_result.failed_gates or "near_repeat" in penalties_applied)
+
     conn.execute(
         """
         UPDATE signals
         SET score_base = ?, confidence_mult = ?, penalties = ?, score_final = ?,
             score_breakdown_json = ?, decision = ?, decision_reason = ?,
-            status = ?, updated_at = ?
+            status = ?, previously_covered = ?, updated_at = ?
         WHERE id = ?
         """,
         (
             base_score, confidence_mult, penalties_total, final_score,
             json.dumps(breakdown), decision, decision_reason,
-            "WATCHLIST" if decision == "watchlist" else ("REJECTED" if decision == "discard" else "SCORED"),
-            now_iso, signal_id,
+            new_status, previously_covered, now_iso, signal_id,
         ),
     )
+    if first_scoring and decision == "watchlist":
+        _add_to_watchlist(conn, signal_id, exposure, now_iso)
     conn.commit()
     return breakdown
+
+
+def _add_to_watchlist(conn: sqlite3.Connection, signal_id: str, exposure: IndianExposure, now_iso: str) -> None:
+    """Part 12: a Watchlist item carries 'a named trigger for revisiting'."""
+    missing = []
+    if exposure.direct_effect != "true":
+        missing.append("a confirmed Indian effect")
+    if not exposure.hs_codes and exposure.breadth != "economy_wide":
+        missing.append("named HS lines")
+    if exposure.actionable_this_week != "true":
+        missing.append("a dated action for exporters")
+    trigger = "Revisit when there is " + (", ".join(missing) if missing else "a new development or a stronger angle")
+    dates = conn.execute(
+        "SELECT MIN(COALESCE(deadline_date, effective_date)) AS d FROM signals WHERE id = ?", (signal_id,)
+    ).fetchone()["d"]
+    conn.execute(
+        "INSERT INTO watchlist (signal_id, added_on, watch_trigger, revisit_on) VALUES (?, ?, ?, ?)",
+        (signal_id, now_iso, trigger, dates),
+    )
