@@ -76,3 +76,9 @@ def content_rules() -> dict:
 
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")  # unused in v1 hybrid mode
+
+# Optional: UN Comtrade requires a free registered subscription key
+# (https://comtradeplus.un.org/) for its data API. Exposure lookups work
+# without one — they fall back to a manual-lookup link — but auto-retrieve a
+# real trade-value figure when a key is present.
+COMTRADE_API_KEY = os.environ.get("COMTRADE_API_KEY")

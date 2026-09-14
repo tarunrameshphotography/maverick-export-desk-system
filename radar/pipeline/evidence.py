@@ -37,14 +37,24 @@ def _strip_html(markup: str) -> str:
     return " ".join(html.unescape(re.sub(r"<[^>]+>", " ", markup)).split())
 
 
+def static_unreadable_reason(url: str) -> str | None:
+    """The URL-shape half of fetch_text's checks, with no network call — so a
+    caller (the Desk Sheet) can flag a document as needing a manual read
+    before anyone has run `fetch` on it, not only after."""
+    host = urlsplit(url).netloc.lower()
+    if host.endswith("news.google.com"):
+        return "aggregator redirect link — open it and store the publisher's own URL"
+    if urlsplit(url).path.lower().endswith(".pdf"):
+        return "PDF — v1 has no PDF reader (DGFT PDFs are often scans); read it and quote by hand"
+    return None
+
+
 def fetch_text(url: str) -> tuple[str, str]:
     """Returns (plain text, URL actually fetched). Raises NotMachineReadable
     with a reason when the document exists but can't be read automatically."""
-    host = urlsplit(url).netloc.lower()
-    if host.endswith("news.google.com"):
-        raise NotMachineReadable("aggregator redirect link — open it and store the publisher's own URL")
-    if urlsplit(url).path.lower().endswith(".pdf"):
-        raise NotMachineReadable("PDF — v1 has no PDF reader (DGFT PDFs are often scans); read it and quote by hand")
+    reason = static_unreadable_reason(url)
+    if reason:
+        raise NotMachineReadable(reason)
 
     match = FR_DOC_NUMBER.search(url)
     if match:

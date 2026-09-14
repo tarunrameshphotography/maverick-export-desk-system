@@ -101,6 +101,44 @@ def test_lead_card_carries_every_section_16a_field(conn):
     assert "Why it matters:" in markdown and "Franchise / format:" in markdown
 
 
+def test_lead_card_carries_exposure_evidence_and_readability_fields(conn):
+    _seeded_conn(conn)
+    card = assemble_desk_sheet(conn, reference_date=date(2026, 9, 14))["lead_card"]
+    assert "exposure_value" in card
+    assert card["exposure_value"]  # never blank — a manual-lookup link at minimum
+    assert "evidence_quality_label" in card
+    assert "manual_read_required" in card
+    markdown = render_desk_sheet_markdown(assemble_desk_sheet(conn, reference_date=date(2026, 9, 14)))
+    assert "Export exposure:" in markdown and "Evidence quality:" in markdown
+
+
+def test_pdf_primary_source_is_flagged_manual_read_required(conn):
+    from radar.desk.desk_sheet import signal_card
+
+    conn.execute(
+        "INSERT INTO sources (id, name, url, kind, signal_type, cadence, method, reliability_1to5) "
+        "VALUES ('src-pdf', 'DGFT', null, 'primary', 'confirm', 'daily', 'pagewatch', 5)"
+    )
+    conn.execute(
+        "INSERT INTO signals (id, title, first_seen_at, status, decision, topic_category, "
+        "primary_source_url, score_final, created_at, updated_at) "
+        "VALUES ('SIG-PDF', 'DGFT notice', 'x', 'SCORED', 'secondary', 'customs_dgft', "
+        "'https://content.dgft.gov.in/x/Notification.pdf', 65, 'x', 'x')"
+    )
+    conn.execute(
+        "INSERT INTO raw_items (source_id, url, canonical_url, title, collected_at, content_hash, status) "
+        "VALUES ('src-pdf', 'https://content.dgft.gov.in/x/Notification.pdf', "
+        "'https://content.dgft.gov.in/x/Notification.pdf', 'DGFT notice', 'x', 'hash-pdf', 'NEW')"
+    )
+    conn.execute("UPDATE raw_items SET signal_id = 'SIG-PDF' WHERE content_hash = 'hash-pdf'")
+    conn.commit()
+
+    signal = dict(conn.execute("SELECT * FROM signals WHERE id = 'SIG-PDF'").fetchone())
+    card = signal_card(conn, signal)
+    assert card["manual_read_required"] is not None
+    assert "PDF" in card["manual_read_required"]
+
+
 def test_rodtep_lead_is_flagged_for_disclosure_on_the_sheet(conn):
     _seeded_conn(conn)
     data = assemble_desk_sheet(conn, reference_date=date(2026, 9, 14))

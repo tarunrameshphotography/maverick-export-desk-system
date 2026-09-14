@@ -8,7 +8,10 @@ import sqlite3
 from datetime import date, datetime, timedelta
 
 from radar import settings
+from radar.pipeline.evidence import static_unreadable_reason
 from radar.pipeline.exposure import IndianExposure
+from radar.pipeline.exposure_lookup import exposure_line
+from radar.pipeline.normalize import canonicalize_url
 from radar.pipeline.verify import verification_status_summary
 
 DEADLINE_WINDOW_DAYS = 30
@@ -204,6 +207,12 @@ def signal_card(conn: sqlite3.Connection, signal: dict) -> dict:
     ).fetchall()]
     breakdown = json.loads(signal["score_breakdown_json"]) if signal.get("score_breakdown_json") else {}
 
+    has_primary_source = any(r["kind"] == "primary" for r in sources)
+    secondary_publishers = {r["publisher"] for r in sources if r["kind"] == "secondary" and r["publisher"]}
+    claim_count = conn.execute(
+        "SELECT COUNT(*) AS n FROM claims WHERE signal_id = ?", (signal["id"],)
+    ).fetchone()["n"]
+
     return {
         "id": signal["id"],
         "title": signal["title"],
@@ -216,6 +225,9 @@ def signal_card(conn: sqlite3.Connection, signal: dict) -> dict:
         "instruments": schemes,
         "exposure": f"direct effect: {exposure.direct_effect}; confidence {exposure.confidence}",
         "exposure_notes": exposure.notes,
+        "exposure_value": exposure_line(exposure.hs_codes, exposure.destination_markets),
+        "evidence_quality_label": _evidence_quality_label(has_primary_source, len(secondary_publishers), claim_count),
+        "manual_read_required": _manual_read_flag(conn, signal["id"], primary_url),
         "sources": [f"{label} x{n}" if n > 1 else label for label, n in source_counts.items()],
         "primary_source_url": primary_url,
         "primary_link_md": f"[{link_label}]({primary_url})" if primary_url else "not recorded",
@@ -232,6 +244,32 @@ def signal_card(conn: sqlite3.Connection, signal: dict) -> dict:
         "format": rules["franchise_format"].get(franchise, "Text"),
         "disclosure": _needs_disclosure(conn, signal["id"]),
     }
+
+
+def _manual_read_flag(conn: sqlite3.Connection, signal_id: str, primary_url: str | None) -> str | None:
+    """Section 16's PDF/document-handling ask: make it obvious in the Desk
+    Sheet when a signal's primary document needs a human to open and read it,
+    rather than only discovering that after someone runs `fetch`."""
+    if not primary_url:
+        return None
+    stored = conn.execute(
+        "SELECT status, note FROM evidence_docs WHERE signal_id = ? AND canonical_url = ?",
+        (signal_id, canonicalize_url(primary_url)),
+    ).fetchone()
+    if stored:
+        return stored["note"] if stored["status"] == "not_machine_readable" else None
+    return static_unreadable_reason(primary_url)
+
+
+def _evidence_quality_label(has_primary_source: bool, secondary_source_count: int, claim_count: int) -> str:
+    source_label = (
+        "primary source" if has_primary_source
+        else (f"{secondary_source_count} independent secondary sources" if secondary_source_count >= 2
+              else "single secondary source — weak")
+    )
+    if claim_count == 0:
+        return f"{source_label}, but 0 claims extracted yet — headline only, verify before treating as strong"
+    return f"{source_label}, {claim_count} claim(s) extracted"
 
 
 def _needs_disclosure(conn: sqlite3.Connection, signal_id: str) -> bool:
@@ -282,12 +320,16 @@ def _render_card(card: dict, action: str | None = None) -> list[str]:
         f"- Products / sector: {', '.join(card['products']) or 'none extracted'} · category `{card['category']}`",
         f"- Instruments: {', '.join(card['instruments']) or 'none extracted'}",
         f"- Indian exposure: {card['exposure']}",
+        f"- Export exposure: {card['exposure_value']}",
         f"- Coverage: {card['coverage']}",
+        f"- Evidence quality: {card['evidence_quality_label']}",
         f"- Sources: {'; '.join(card['sources'])}",
         f"- Primary link: {card['primary_link_md']}" + (f" · {card['doc_ref']}" if card.get("doc_ref") else ""),
         f"- Suggested angle: {card['angle']}",
         f"- Franchise / format: {card['franchise']} — {card['format']}",
     ]
+    if card.get("manual_read_required"):
+        lines.append(f"- MANUAL READ REQUIRED: {card['manual_read_required']}")
     if card["unknowns"]:
         lines.append(f"- Not yet established: {', '.join(card['unknowns'])}")
     if card["disclosure"]:
