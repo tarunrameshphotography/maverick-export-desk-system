@@ -59,7 +59,7 @@ def test_run_survives_every_source_failing(conn, monkeypatch):
         def collect(self, source):
             raise CollectorError(f"{source['id']}: down")
 
-    for method in ("rss", "api", "pagewatch"):
+    for method in ("rss", "api", "pagewatch", "cbic_api"):
         monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, method, Dead())
 
     row = runner.run(conn, "morning", use_sample=False, reference_date=date(2026, 9, 14))

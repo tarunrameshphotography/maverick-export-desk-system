@@ -64,19 +64,23 @@ sources:
     active: true
 
   - id: cbic_customs_notifications
-    name: CBIC Customs Notifications (Tariff & Non-Tariff)
-    url: https://www.cbic.gov.in/entities/customs-notfns
+    name: CBIC Customs Notifications & Circulars (Tax Information Portal)
+    url: https://taxinformation.cbic.gov.in/
     kind: primary
     signal_type: confirm
     cadence: daily
-    method: pagewatch
+    method: cbic_api
+    tax: customs
     country: IN
     category: customs_cbic
     reliability_1to5: 5
-    active: false
-    notes: "Probe 14 Sep 2026: Angular single-page app (3 KB HTML shell) over a generic content API
-      (api/getContent...). Needs a dedicated collector against that API. TOP PRIORITY gap: CBIC
-      carries duty changes, ADD/CVD and safeguard notifications."
+    active: true
+    notes: "14 Sep 2026: the entities/customs-notfns SPA route now 404s to the homepage; the live
+      feed moved to taxinformation.cbic.gov.in's own JSON API
+      (api/cbic-notification-msts/fetchUpdatesByTaxId/1000002), found by watching that portal's
+      network calls in a real browser. No stable per-document permalink exists on that portal, so
+      every item links to the portal itself with the exact circular/notification number and date
+      in body_text for manual lookup — see radar/collectors/cbic.py docstring."
 
   - id: icegate_advisories
     name: ICEGATE Advisories

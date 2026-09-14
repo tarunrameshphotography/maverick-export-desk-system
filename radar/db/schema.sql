@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS sources (
     kind                TEXT NOT NULL CHECK (kind IN ('primary', 'secondary')),
     signal_type         TEXT NOT NULL CHECK (signal_type IN ('early', 'confirm', 'enforced', 'context')),
     cadence             TEXT,
-    method              TEXT NOT NULL CHECK (method IN ('rss', 'api', 'pagewatch', 'email', 'manual')),
+    method              TEXT NOT NULL CHECK (method IN ('rss', 'api', 'pagewatch', 'cbic_api', 'email', 'manual')),
     country             TEXT,
     category            TEXT,
     reliability_1to5    INTEGER NOT NULL CHECK (reliability_1to5 BETWEEN 1 AND 5),
