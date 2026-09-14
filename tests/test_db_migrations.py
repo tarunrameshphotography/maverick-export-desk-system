@@ -23,6 +23,31 @@ def test_init_db_is_idempotent(conn):
     db.init_db(conn)
 
 
+def test_migrations_apply_once_and_are_recorded():
+    c = db.get_connection(":memory:")
+    first = db.init_db(c)
+    second = db.init_db(c)
+    assert "001_performance_leads.sql" in first
+    assert second == []
+    cols = {r["name"] for r in c.execute("PRAGMA table_info(performance)").fetchall()}
+    assert "qualified_leads" in cols
+    c.close()
+
+
+def test_migration_upgrades_a_database_created_before_it_existed(tmp_path):
+    path = tmp_path / "old.db"
+    c = db.get_connection(path)
+    c.executescript(db.SCHEMA_PATH.read_text(encoding="utf-8"))  # baseline only, as an older install would have
+    c.commit()
+    assert "qualified_leads" not in {r["name"] for r in c.execute("PRAGMA table_info(performance)").fetchall()}
+    c.close()
+
+    c = db.get_connection(path)
+    db.init_db(c)
+    assert "qualified_leads" in {r["name"] for r in c.execute("PRAGMA table_info(performance)").fetchall()}
+    c.close()
+
+
 def test_seed_sources_loads_config(conn):
     count = db.seed_sources(conn)
     assert count > 0

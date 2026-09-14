@@ -61,7 +61,14 @@ def scoring_weights() -> dict:
 
 
 def feature_flags() -> dict:
-    return _load_yaml("scoring_weights.yaml").get("feature_flags", {})
+    flags = _load_yaml("scoring_weights.yaml").get("feature_flags", {})
+    if flags.get("auto_publish"):
+        raise RuntimeError("auto_publish must stay false in v1 (Section 30). Human approval is a hard gate.")
+    return flags
+
+
+def content_rules() -> dict:
+    return _load_yaml("content_rules.yaml")
 
 
 ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")  # unused in v1 hybrid mode

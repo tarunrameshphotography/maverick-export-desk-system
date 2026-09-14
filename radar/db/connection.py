@@ -22,10 +22,28 @@ def get_connection(db_path: Path | str | None = None) -> sqlite3.Connection:
     return conn
 
 
-def init_db(conn: sqlite3.Connection) -> None:
-    schema_sql = SCHEMA_PATH.read_text(encoding="utf-8")
-    conn.executescript(schema_sql)
+MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
+
+
+def init_db(conn: sqlite3.Connection) -> list[str]:
+    """Applies the baseline schema (idempotent) then any migrations/NNN_*.sql
+    not yet recorded in schema_migrations. Returns the migrations applied now."""
+    conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS schema_migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)"
+    )
+    applied_names = {r["name"] for r in conn.execute("SELECT name FROM schema_migrations").fetchall()}
+    newly_applied = []
+    for path in sorted(MIGRATIONS_DIR.glob("*.sql")):
+        if path.name in applied_names:
+            continue
+        conn.executescript(path.read_text(encoding="utf-8"))
+        conn.execute(
+            "INSERT INTO schema_migrations (name, applied_at) VALUES (?, datetime('now'))", (path.name,)
+        )
+        newly_applied.append(path.name)
     conn.commit()
+    return newly_applied
 
 
 def next_sequence(conn: sqlite3.Connection, name: str) -> int:

@@ -1,0 +1,61 @@
+# Drafting guardrails, copied from the approved strategy — not invented here.
+# Sources: BRAND/positioning.md, BRAND/voice_bible.md, STRATEGY/linkedin_strategy.md,
+# STRATEGY/instagram_strategy.md, INTELLIGENCE SYSTEM/approval_workflow.md.
+
+disclosure_line: "Disclosure: Maverick Minds facilitates RoDTEP/RoSCTL scrip transfers."
+
+# voice_bible.md "Avoid" list + Section 10 of the master prompt.
+banned_phrases:
+  - game-changer
+  - game changer
+  - huge opportunity
+  - must-know
+  - hidden secret
+  - nobody is talking about
+  - guaranteed
+  - passive income
+  - explode
+  - skyrocket
+  - let that sink in
+  - "agree?"
+  - big update
+  - this will change everything
+  - secret export opportunity
+  - lakhs per month
+
+linkedin:
+  min_words: 150
+  max_words: 300
+  allow_exclamation: false
+  allow_emoji: false
+  source_link_location: first_comment
+
+instagram:
+  reel_seconds: [45, 75]
+  carousel_slides: [7, 10]
+  language: "Tamil voice-over, English on-screen text (English-only edition for best pieces)"
+  never: ["scrip rates or sell-your-scrip promotions", "income claims", "top-10 product listicles"]
+
+# approval_workflow.md risk tiers — which categories force which tier.
+risk_tier_by_category:
+  red: [incentives, trade_remedies, anti_dumping, countervailing_duty, safeguards, sanctions, geopolitics, legal_ruling]
+  amber: [tariffs, trade_agreements, rules_of_origin, customs_dgft, customs_cbic, customs_other, fx_payments,
+          carbon_environment, tbt_sps, product_standards, import_restrictions, sps_food_alert, trade_statistics,
+          competitor_policy]
+  # anything else defaults to green
+
+franchise_format:
+  The Fine Print: "Text + annotated document image"
+  Second Order: "Carousel with an exposure chart"
+  Countdown: "Text list (recurring template)"
+  Headline vs Reality: "Text + comparison table"
+  Draft Watch: "Text + one visual"
+  Rejection Watch: "Carousel / chart"
+  Freight Pulse: "Chart + 100 words"
+  The Number: "Single chart"
+  Market Door: "Document carousel"
+  News-pegged explainer: "Carousel / Reel"
+  Ask the Desk: "Text Q&A / short video"
+  The Calls Ledger: "Table image"
+  Case Notes: "Text"
+  Offers: "Any"

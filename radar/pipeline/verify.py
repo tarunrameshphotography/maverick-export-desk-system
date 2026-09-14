@@ -72,6 +72,42 @@ def build_claims_table(conn: sqlite3.Connection, signal_id: str) -> int:
     return inserted
 
 
+def add_claim(
+    conn: sqlite3.Connection,
+    signal_id: str,
+    claim_text: str,
+    claim_type: str,
+    source_url: str,
+    source_type: str,
+    now_iso: str,
+    source_title: str | None = None,
+    source_date: str | None = None,
+    source_quote: str | None = None,
+    verified_by: str | None = None,
+) -> int:
+    """For claims found during research rather than extracted from a collected
+    item — e.g. the TradeStat figure behind an exposure line. Inserted as
+    'verified' only when a quote is supplied; otherwise 'pending'."""
+    if claim_type not in VALID_CLAIM_TYPES:
+        raise ValueError(f"Invalid claim type: {claim_type}")
+    if source_type not in ("primary", "secondary"):
+        raise ValueError(f"Invalid source type: {source_type}")
+    status = "verified" if source_quote else "pending"
+    cur = conn.execute(
+        """
+        INSERT INTO claims (signal_id, claim_text, claim_type, source_url, source_title, source_type,
+                             source_date, source_quote, status, verified_by, verified_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            signal_id, claim_text, claim_type, source_url, source_title, source_type, source_date,
+            source_quote, status, verified_by if source_quote else None, now_iso if source_quote else None,
+        ),
+    )
+    conn.commit()
+    return cur.lastrowid
+
+
 def mark_claim(
     conn: sqlite3.Connection,
     claim_id: int,
