@@ -91,6 +91,26 @@ def test_templated_federal_register_titles_for_different_cases_stay_apart():
     assert len(cluster_raw_items(items)) == 5
 
 
+def test_dgtr_templated_titles_for_different_products_stay_apart():
+    # Live run 14 Sep 2026 (after activating DGTR): unlike US ITA titles,
+    # DGTR's phrasing is "...investigation concerning imports of X
+    # originating in or exported from Y" -- the product pattern didn't match
+    # it, so the different-case veto never engaged and unrelated DGTR cases
+    # collapsed into one signal via title similarity alone.
+    items = [
+        {"title": "Anti-dumping investigation concerning imports of “Polyethylene Terephthalate Film "
+                   "above 100 microns” originating in or exported from China PR, Singapore, Thailand and UAE.",
+         "published_at": "2026-09-14"},
+        {"title": "Anti-Dumping Investigation concerning imports of \"Cold rolled Flat Products of Stainless "
+                   "Steel 300 and 400 Series\" originating in or exported from China PR., Indonesia and Vietnam.",
+         "published_at": "2026-09-14"},
+        {"title": "Anti-dumping investigation on imports of “Medical Examination Rubber Gloves” "
+                   "from Malaysia and Thailand.",
+         "published_at": "2026-09-14"},
+    ]
+    assert len(cluster_raw_items(items)) == 3
+
+
 def test_one_trade_remedy_case_seen_by_commerce_and_the_itc_is_one_signal():
     items = [
         {"title": "Certain Linear Hydraulic Cylinders and Parts Thereof From the People's Republic of China, India, and Mexico: Initiation of Countervailing Duty Investigations", "published_at": "2026-09-14"},

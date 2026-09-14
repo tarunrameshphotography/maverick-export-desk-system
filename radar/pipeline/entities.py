@@ -48,14 +48,20 @@ PRODUCT_PATTERNS = [
     # WTO / trade-remedy news: "safeguard investigation on self-adhesive labels"
     re.compile(r"\b(?:safeguard|anti-?dumping|countervailing)\s+(?:duty\s+)?(?:investigation|duties|duty|measures?)\s+"
                r"on\s+(?:imports of\s+)?(?:certain\s+)?(?P<product>[a-z][a-z ,\-]{2,60}?)(?:\s+from|\s+into|[.,;:]|$)", re.I),
+    # DGTR: "Anti-dumping investigation concerning imports of “X” originating in
+    # or exported from Y" — its own boilerplate is templated enough that without a
+    # product match here, the dedupe veto in different_cases() never engages and
+    # unrelated DGTR cases collapse into one signal via title similarity alone.
+    re.compile(r"\bimports\s+of\s+[“‘\"']?(?P<product>[a-z][a-z0-9 ,\-()/]{2,80}?)[”’\"']?\s+"
+               r"(?:originating in or exported from|from)\b", re.I),
 ]
 
 
 def _normalize_product(raw: str) -> str | None:
-    text = re.sub(r"\s+", " ", raw).strip(" ,-").lower()
+    text = re.sub(r"\s+", " ", raw).strip(" ,-“”‘’\"'").lower()
     text = re.sub(r"^(certain|the)\s+", "", text)
     text = re.sub(r"\s+and parts thereof$", "", text)
-    if len(text) < 3 or len(text) > 70 or text in {"imports", "goods", "products"}:
+    if len(text) < 3 or len(text) > 85 or text in {"imports", "goods", "products"}:
         return None
     return text
 

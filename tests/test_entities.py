@@ -3,8 +3,27 @@ from radar.pipeline.entities import (
     extract_dates,
     extract_entities,
     extract_hs_and_clusters,
+    extract_products,
     extract_schemes_and_authorities,
 )
+
+
+def test_extract_products_matches_dgtr_concerning_imports_of_phrasing():
+    entities = extract_products(
+        "Anti-dumping investigation concerning imports of “Polyethylene Terephthalate Film "
+        "above 100 microns” originating in or exported from China PR, Singapore, Thailand and UAE."
+    )
+    values = {e["normalized_value"] for e in entities}
+    assert "polyethylene terephthalate film above 100 microns" in values
+
+
+def test_extract_products_matches_dgtr_on_imports_of_phrasing():
+    entities = extract_products(
+        "Anti-dumping investigation on imports of “Medical Examination Rubber Gloves” "
+        "from Malaysia and Thailand."
+    )
+    values = {e["normalized_value"] for e in entities}
+    assert "medical examination rubber gloves" in values
 
 
 def test_extract_countries_normalizes_aliases():
