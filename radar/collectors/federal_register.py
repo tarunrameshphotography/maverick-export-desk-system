@@ -18,9 +18,13 @@ class FederalRegisterCollector(Collector):
         params = {
             "conditions[term]": query,
             "order": "newest",
-            "per_page": 20,
-            "fields[]": ["title", "html_url", "abstract", "publication_date", "document_number"],
+            "per_page": source.get("per_page", 40),
+            "fields[]": ["title", "html_url", "abstract", "publication_date", "document_number", "agencies"],
         }
+        if source.get("agencies"):
+            # Without an agency filter, "India" matches bus-company mergers and
+            # immigration rules; trade agencies only.
+            params["conditions[agencies][]"] = source["agencies"]
         try:
             resp = requests.get(source["url"], params=params, timeout=TIMEOUT_SECONDS)
             resp.raise_for_status()
@@ -37,9 +41,10 @@ class FederalRegisterCollector(Collector):
             if not title or not url:
                 continue
             body = doc.get("abstract") or ""
+            agencies = ", ".join(a.get("name", "") for a in doc.get("agencies") or [] if a.get("name"))
             doc_number = doc.get("document_number")
             if doc_number:
-                body = f"[Federal Register doc {doc_number}] {body}"
+                body = f"[Federal Register doc {doc_number}{'; ' + agencies if agencies else ''}] {body}"
             items.append(
                 RawItem(
                     source_id=source["id"],

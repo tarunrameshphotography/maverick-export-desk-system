@@ -82,11 +82,34 @@ def _values(entities: list[dict], types: tuple[str, ...]) -> set[str]:
 DOC_REF_PREFIXES = ("Notification ", "Federal Register ", "Trade Notice ", "Public Notice ")
 
 
+def _products_compatible(products_a: set[str], products_b: set[str]) -> bool:
+    """'wheat' and 'wheat flour' are one policy move; 'raw honey' and 'glycine' are not."""
+    return any(a in b or b in a for a in products_a for b in products_b)
+
+
+def different_cases(item_a: dict, item_b: dict) -> bool:
+    """Veto for templated titles. US trade-remedy notices share boilerplate
+    ('...: Preliminary Results of Antidumping Duty Administrative Review;
+    2024-2025'), so title similarity alone merges honey-from-Brazil with
+    shrimp-from-India. Different products, or the same product from disjoint
+    countries, are different cases however alike the headlines read."""
+    ent_a, ent_b = _entities(item_a), _entities(item_b)
+    prod_a, prod_b = _values(ent_a, ("product",)), _values(ent_b, ("product",))
+    if not prod_a or not prod_b:
+        return False
+    if not _products_compatible(prod_a, prod_b):
+        return True
+    countries_a, countries_b = _values(ent_a, ("country",)), _values(ent_b, ("country",))
+    return bool(countries_a and countries_b and not (countries_a & countries_b))
+
+
 def same_event_by_strong_key(item_a: dict, item_b: dict) -> bool:
     """Two items describe the same underlying event if they cite the same
-    notification / document number, or name the same instrument AND the same
-    specific date (e.g. RoDTEP + 2026-09-30). Headlines about one notification
-    are often worded too differently for title similarity to catch."""
+    notification / document number; name the same instrument AND the same
+    specific date (e.g. RoDTEP + 2026-09-30); or name the same product from
+    overlapping countries (a trade-remedy case seen from Commerce and the ITC).
+    Headlines about one event are often worded too differently for title
+    similarity to catch."""
     ent_a, ent_b = _entities(item_a), _entities(item_b)
     refs_a = {v for v in _values(ent_a, ("regulation",)) if v.startswith(DOC_REF_PREFIXES)}
     refs_b = {v for v in _values(ent_b, ("regulation",)) if v.startswith(DOC_REF_PREFIXES)}
@@ -96,15 +119,21 @@ def same_event_by_strong_key(item_a: dict, item_b: dict) -> bool:
     shared_instrument = (_values(ent_a, instruments) - refs_a) & (_values(ent_b, instruments) - refs_b)
     dates = ("date", "effective_date", "deadline")
     shared_date = _values(ent_a, dates) & _values(ent_b, dates)
-    return bool(shared_instrument and shared_date)
+    if shared_instrument and shared_date:
+        return True
+    prod_a, prod_b = _values(ent_a, ("product",)), _values(ent_b, ("product",))
+    shared_country = _values(ent_a, ("country",)) & _values(ent_b, ("country",))
+    return bool(prod_a and prod_b and _products_compatible(prod_a, prod_b) and shared_country)
 
 
 def similarity_score(item_a: dict, item_b: dict) -> float:
-    """Combined score in [0, 1]. A strong-key match (same document, or same
-    instrument + same date) scores 1.0; otherwise title similarity carries most
-    of the weight with entity overlap confirming. Dates outside the window veto
-    a match outright."""
+    """Combined score in [0, 1]. A strong-key match scores 1.0; a
+    different-case veto scores 0.0; otherwise title similarity carries most of
+    the weight with entity overlap confirming. Dates outside the window veto a
+    match outright."""
     if not _within_date_window(item_a.get("published_at"), item_b.get("published_at")):
+        return 0.0
+    if different_cases(item_a, item_b):
         return 0.0
     if same_event_by_strong_key(item_a, item_b):
         return 1.0

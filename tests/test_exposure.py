@@ -71,6 +71,41 @@ def test_confidence_increases_with_more_corroborating_evidence():
     assert rich.confidence > thin.confidence
 
 
+# Regression cases from the first live run (14 Sep 2026).
+
+def test_rbi_monetary_operation_is_not_an_exporter_effect():
+    for title in ["RBI announces OMO Sale of Government of India Securities",
+                  "RBI imposes monetary penalty on Asset Care & Reconstruction Enterprise Limited",
+                  "RBI to conduct Overnight Variable Rate Reverse Repo (VRRR) auction under LAF"]:
+        assert _analyze(title).direct_effect == "uncertain", title
+
+
+def test_rbi_fema_export_rule_still_counts():
+    assert _analyze("RBI notifies FEMA export realisation rules for exporters").direct_effect == "true"
+
+
+def test_dgft_export_policy_amendment_is_a_market_access_change():
+    exp = _analyze("DGFT Notification 34/2026-27: Amendment in the Export Policy of Wheat Flour and related products - reg.")
+    assert exp.direct_effect == "true"
+    assert exp.market_access_change == "true"
+    assert exp.affected_products == ["wheat flour"]
+    assert exp.breadth == "specific"
+
+
+def test_dgft_procedure_change_is_a_compliance_change():
+    exp = _analyze("DGFT Trade Notice 27/2026-27: Inviting comments on Amendment in Para 2.93 of the Handbook of Procedures")
+    assert exp.compliance_cost_change == "true"
+
+
+def test_us_investigation_naming_india_extracts_product_and_all_respondents():
+    exp = _analyze("Certain Linear Hydraulic Cylinders and Parts Thereof From the People's Republic of China, "
+                   "India, and Mexico: Initiation of Countervailing Duty Investigations")
+    assert exp.direct_effect == "true"
+    assert exp.affected_products == ["linear hydraulic cylinders"]
+    assert set(exp.destination_markets) == {"China", "Mexico"}
+    assert exp.threat == "true"
+
+
 def test_round_trip_json_serialization():
     exp = _analyze("DGFT notified RoDTEP rate extension for India")
     restored = IndianExposure.from_json(exp.to_json())

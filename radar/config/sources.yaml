@@ -185,6 +185,13 @@ sources:
     reliability_1to5: 5
     active: true
     query: "India"
+    agencies:
+      - international-trade-administration
+      - international-trade-commission
+      - trade-representative-office-of-united-states
+      - u-s-customs-and-border-protection
+      - food-and-drug-administration
+      - industry-and-security-bureau
 
   - id: federal_register_antidumping_india
     name: US Federal Register — antidumping/countervailing duty, India
@@ -198,6 +205,13 @@ sources:
     reliability_1to5: 5
     active: true
     query: "countervailing duty India"
+    agencies:
+      - international-trade-administration
+      - international-trade-commission
+      - trade-representative-office-of-united-states
+      - u-s-customs-and-border-protection
+      - food-and-drug-administration
+      - industry-and-security-bureau
 
   - id: us_fda_import_alerts
     name: US FDA Import Alerts

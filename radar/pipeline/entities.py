@@ -24,8 +24,52 @@ COUNTRY_ALIASES = {
     "singapore": "Singapore", "germany": "Germany", "france": "France",
     "netherlands": "Netherlands", "italy": "Italy",
     "south korea": "South Korea", "korea": "South Korea",
-    "vietnam": "Vietnam", "bangladesh": "Bangladesh", "china": "China",
+    "vietnam": "Vietnam", "viet nam": "Vietnam", "bangladesh": "Bangladesh", "china": "China",
+    # Frequent trade-remedy respondents and competitor exporters of India's lines
+    "mexico": "Mexico", "indonesia": "Indonesia", "laos": "Laos", "taiwan": "Taiwan",
+    "turkey": "Turkey", "türkiye": "Turkey", "turkiye": "Turkey", "brazil": "Brazil",
+    "argentina": "Argentina", "russia": "Russia", "russian federation": "Russia",
+    "south africa": "South Africa", "egypt": "Egypt", "thailand": "Thailand",
+    "malaysia": "Malaysia", "sri lanka": "Sri Lanka", "pakistan": "Pakistan",
+    "oman": "Oman", "qatar": "Qatar", "kuwait": "Kuwait", "bahrain": "Bahrain",
+    "israel": "Israel", "nigeria": "Nigeria", "kenya": "Kenya", "philippines": "Philippines",
+    "cambodia": "Cambodia", "madagascar": "Madagascar", "new zealand": "New Zealand",
+    "switzerland": "Switzerland", "norway": "Norway", "chile": "Chile", "peru": "Peru",
 }
+
+# Standard title shapes that name a product outright. Deliberately narrow: a
+# wrong product is worse than none (Section 8, "do not fabricate exposure").
+PRODUCT_PATTERNS = [
+    # US ITA/ITC: "Certain Quartz Surface Product From India: Preliminary Results..."
+    re.compile(r"^(?:Certain\s+)?(?P<product>[A-Z][^:;]{2,80}?)\s+(?i:from)\s+(?:the\s+|[A-Z])", re.M),
+    # DGFT: "Amendment in the Export Policy of Wheat Flour and related products"
+    re.compile(r"\b(?:Export|Import)\s+Policy\s+(?:of|for|on)\s+(?P<product>[A-Za-z][A-Za-z ,\-]{2,60}?)"
+               r"(?:\s+and related products|\s+-\s*reg|\s+under|\s*[.,;:(]|$)", re.I),
+    # WTO / trade-remedy news: "safeguard investigation on self-adhesive labels"
+    re.compile(r"\b(?:safeguard|anti-?dumping|countervailing)\s+(?:duty\s+)?(?:investigation|duties|duty|measures?)\s+"
+               r"on\s+(?:imports of\s+)?(?:certain\s+)?(?P<product>[a-z][a-z ,\-]{2,60}?)(?:\s+from|\s+into|[.,;:]|$)", re.I),
+]
+
+
+def _normalize_product(raw: str) -> str | None:
+    text = re.sub(r"\s+", " ", raw).strip(" ,-").lower()
+    text = re.sub(r"^(certain|the)\s+", "", text)
+    text = re.sub(r"\s+and parts thereof$", "", text)
+    if len(text) < 3 or len(text) > 70 or text in {"imports", "goods", "products"}:
+        return None
+    return text
+
+
+def extract_products(text: str) -> list[dict]:
+    results, seen = [], set()
+    for pattern in PRODUCT_PATTERNS:
+        for match in pattern.finditer(text):
+            product = _normalize_product(match.group("product"))
+            if product and product not in seen:
+                seen.add(product)
+                results.append({"entity_type": "product", "raw_value": match.group(0)[:120],
+                                "normalized_value": product, "confidence": 0.8})
+    return results
 
 # scheme/authority keyword -> (entity_type, normalized_value)
 SCHEME_AUTHORITY_KEYWORDS: dict[str, tuple[str, str]] = {
@@ -255,6 +299,7 @@ def extract_entities(text: str) -> list[dict]:
         extract_countries(text)
         + instruments
         + extract_doc_refs(text)
+        + extract_products(text)
         + hs_and_clusters
         + sensitivity_clusters
         + extract_dates(text)

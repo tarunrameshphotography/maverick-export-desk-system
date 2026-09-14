@@ -127,7 +127,8 @@ def score_criteria(
     angle_strength = 4 if angle_selected else (3 if angle_exists else 2)
 
     # Part 12: 5 = "many exporters, or clearly named HS lines and clusters".
-    named = len(exposure.destination_markets) + len(exposure.clusters) + len(exposure.hs_codes)
+    named = (len(exposure.destination_markets) + len(exposure.clusters) + len(exposure.hs_codes)
+             + len(exposure.affected_products))
     breadth_points = 3 if exposure.breadth == "economy_wide" else min(3, named)
     indian_exposure = min(5, (2 if exposure.direct_effect == "true" else 0) + breadth_points)
 

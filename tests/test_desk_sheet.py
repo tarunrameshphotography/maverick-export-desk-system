@@ -51,6 +51,20 @@ def test_get_upcoming_deadlines_within_window(conn):
     assert "2026-09-30" in dated  # RoDTEP/RoSCTL extension deadline from the sample fixture
 
 
+def test_deadlines_from_discarded_signals_are_not_listed(conn):
+    # Live run: an RBI bank-specific direction's date appeared as an "exporter deadline".
+    conn.execute(
+        "INSERT INTO signals (id, title, first_seen_at, status, decision, created_at, updated_at) "
+        "VALUES ('SIG-X', 'Bank direction', 'x', 'REJECTED', 'discard', 'x', 'x')"
+    )
+    conn.execute(
+        "INSERT INTO signal_entities (signal_id, entity_type, raw_value, normalized_value) "
+        "VALUES ('SIG-X', 'deadline', '16 Sep 2026', '2026-09-16')"
+    )
+    conn.commit()
+    assert get_upcoming_deadlines(conn, reference_date=date(2026, 9, 14)) == []
+
+
 def test_get_upcoming_deadlines_excludes_out_of_window_dates(conn):
     _seeded_conn(conn)
     deadlines = get_upcoming_deadlines(conn, reference_date=date(2026, 1, 1), window_days=7)

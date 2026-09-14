@@ -54,7 +54,13 @@ class RssCollector(Collector):
                 continue
             summary = entry.get("summary", "") or entry.get("description", "")
             published = entry.get("published") or entry.get("updated")
-            outlet = (entry.get("source") or {}).get("href")  # Google News names the real outlet here
+            source_meta = entry.get("source") or {}
+            outlet = source_meta.get("href")  # Google News names the real outlet here
+            outlet_name = source_meta.get("title")
+            # "Headline - Business Standard" -> "Headline": the outlet name adds
+            # noise to title similarity and is already kept as publisher.
+            if outlet_name and title.endswith(f" - {outlet_name}"):
+                title = title[: -len(f" - {outlet_name}")].strip()
             items.append(
                 RawItem(
                     source_id=source["id"],

@@ -13,15 +13,32 @@ from datetime import date
 INDIA_DIRECT_AUTHORITIES = {"DGFT", "CBIC", "RBI", "DGTR", "ICEGATE"}
 INDIA_SPECIFIC_SCHEMES = {"RoDTEP", "RoSCTL", "Duty Drawback"}
 
+# Indian authorities whose every instrument is about trade by definition.
+INHERENTLY_TRADE_AUTHORITIES = {"DGFT", "CBIC", "DGTR", "ICEGATE"}
+# G2 asks for "an identifiable effect on Indian exporters or importers". An
+# Indian authority or the word "India" is not enough on its own: an RBI
+# repo auction names India's central bank and affects no exporter.
+TRADE_RELEVANCE = re.compile(
+    r"\b(exports?|exporters?|imports?|importers?|shipments?|customs|tariffs?|dut(?:y|ies)|foreign trade|"
+    r"trade (?:policy|deal|agreement|pact|remed\w*|barriers?|talks|data)|fta|cepa|ceta|free trade|"
+    r"anti-?dumping|countervailing|safeguard|rodtep|rosctl|drawback|fema|realisation|edpms|exim|"
+    r"advance authori[sz]ation|epcg|certificate of origin|export obligation|pre-shipment|"
+    r"non-tariff|market access|quotas?|trq|de minimis|merchandise|less-than-fair-value|"
+    r"international trade (?:administration|commission)|trade representative)\b", re.I
+)
 LANDED_COST_KEYWORDS = re.compile(
-    r"\b(tariff|duty|customs duty|countervailing|anti-?dumping|safeguard duty|cess|surcharge)\b", re.I
+    r"\b(tariffs?|dut(?:y|ies)|customs duty|countervailing|anti-?dumping|safeguard duty|cess|surcharge|"
+    r"de minimis)\b", re.I
 )
 MARKET_ACCESS_KEYWORDS = re.compile(
-    r"\b(import ban|import restriction|quota|licensing requirement|market access|"
-    r"trade agreement|free trade agreement|\bfta\b|ceta)\b", re.I
+    r"\b(import ban|import restriction|export ban|export restriction|quotas?|trq|tariff rate quota|"
+    r"licensing (?:requirement|regime)|licen[cs]e|market access|export policy|import policy|prohibited|"
+    r"restricted|minimum export price|trade agreement|free trade agreement|fta|cepa|ceta)\b", re.I
 )
 COMPLIANCE_COST_KEYWORDS = re.compile(
-    r"\b(standard|regulation|sps|tbt|cbam|eudr|labelling|labeling|residue limit|certification|compliance)\b", re.I
+    r"\b(standards?|regulations?|sps|tbt|cbam|eudr|labelling|labeling|residue limit|certification|compliance|"
+    r"handbook of procedures|foreign trade policy|advance authori[sz]ation|epcg|certificate of origin|"
+    r"pre-shipment inspection|psia|export obligation|e-?brc|rcmc)\b", re.I
 )
 OPPORTUNITY_KEYWORDS = re.compile(
     r"\b(duty-?free|preferential (?:access|tariff|treatment)|enters into force|market access gained|"
@@ -94,18 +111,26 @@ def analyze_indian_exposure(
     schemes = {e["normalized_value"] for e in entities if e["entity_type"] == "scheme"}
     hs_codes = sorted({e["normalized_value"] for e in entities if e["entity_type"] == "hs_code"})
     clusters = sorted({e["normalized_value"] for e in entities if e["entity_type"] == "cluster"})
+    products = sorted({e["normalized_value"] for e in entities if e["entity_type"] == "product"})
     destination_markets = sorted(countries - {"India"})
 
     india_authority_hit = bool(authorities & INDIA_DIRECT_AUTHORITIES)
     india_scheme_hit = bool(schemes & INDIA_SPECIFIC_SCHEMES)
     india_mentioned = "India" in countries
+    trade_relevant = india_scheme_hit or bool(authorities & INHERENTLY_TRADE_AUTHORITIES) or bool(
+        TRADE_RELEVANCE.search(text)
+    )
 
-    if india_authority_hit or india_scheme_hit:
+    if (india_authority_hit or india_scheme_hit or india_mentioned) and not trade_relevant:
+        direct_effect = "uncertain"
+        notes.append("India or an Indian authority is named, but nothing in the text touches exports, "
+                     "imports, duties or trade rules — no exporter effect established.")
+    elif india_authority_hit or india_scheme_hit:
         direct_effect = "true"
-        notes.append("Indian authority or India-specific scheme named directly.")
+        notes.append("Indian authority or India-specific scheme named directly, in a trade context.")
     elif india_mentioned:
         direct_effect = "true"
-        notes.append("India named as a country in the signal text.")
+        notes.append("India named as a country in a trade context.")
     elif countries or hs_codes:
         direct_effect = "uncertain"
         notes.append("Foreign development with no explicit India mention — exposure unconfirmed.")
@@ -131,7 +156,7 @@ def analyze_indian_exposure(
     if direct_effect == "true" and instruments & ECONOMY_WIDE_INSTRUMENTS:
         breadth = "economy_wide"
         notes.append(f"{', '.join(sorted(instruments & ECONOMY_WIDE_INSTRUMENTS))} applies to exporters across products.")
-    elif hs_codes or clusters:
+    elif hs_codes or clusters or products:
         breadth = "specific"
     else:
         breadth = "unknown"
@@ -170,7 +195,7 @@ def analyze_indian_exposure(
 
     return IndianExposure(
         direct_effect=direct_effect,
-        affected_products=clusters,  # cluster labels double as a product proxy in v1
+        affected_products=products,
         hs_codes=hs_codes,
         destination_markets=destination_markets,
         clusters=clusters,

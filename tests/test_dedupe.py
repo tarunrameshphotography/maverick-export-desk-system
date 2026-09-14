@@ -79,5 +79,34 @@ def test_dedupe_and_cluster_new_items_creates_signals_and_links_raw_items(conn):
     assert rodtep_signal["n"] >= 2  # the four RoDTEP/RoSCTL articles collapse into one signal
 
 
+def test_templated_federal_register_titles_for_different_cases_stay_apart():
+    # Live run 14 Sep 2026: these merged into one "signal" before the product veto.
+    items = [
+        {"title": "Raw Honey From Brazil: Preliminary Results of Antidumping Duty Administrative Review; 2024-2025", "published_at": "2026-09-14"},
+        {"title": "Certain Frozen Warmwater Shrimp from India: Final Results of Antidumping Duty Administrative Review; 2024-2025", "published_at": "2026-09-14"},
+        {"title": "Polyethylene Terephthalate Resin From the Sultanate of Oman: Amended Final Results of Antidumping Duty Administrative Review", "published_at": "2026-09-14"},
+        {"title": "Glycine From India: Preliminary Results and Rescission, in Part, of Countervailing Duty Administrative Review", "published_at": "2026-09-14"},
+        {"title": "Glycine From Japan: Preliminary Results and Rescission, in Part, of Antidumping Duty Administrative Review", "published_at": "2026-09-14"},
+    ]
+    assert len(cluster_raw_items(items)) == 5
+
+
+def test_one_trade_remedy_case_seen_by_commerce_and_the_itc_is_one_signal():
+    items = [
+        {"title": "Certain Linear Hydraulic Cylinders and Parts Thereof From the People's Republic of China, India, and Mexico: Initiation of Countervailing Duty Investigations", "published_at": "2026-09-14"},
+        {"title": "Certain Linear Hydraulic Cylinders and Parts Thereof From Canada, the People's Republic of China, India, the Republic of Korea, and Mexico: Initiation of Less-Than-Fair-Value Investigations", "published_at": "2026-09-14"},
+        {"title": "Linear Hydraulic Cylinders From Canada, China, India, Mexico, and South Korea; Revised Schedule for the Subject Investigations", "published_at": "2026-09-12"},
+    ]
+    assert len(cluster_raw_items(items)) == 1
+
+
+def test_wheat_and_wheat_flour_policy_moves_same_day_stay_together():
+    items = [
+        {"title": "DGFT Notification 34/2026-27: Amendment in the Export Policy of Wheat Flour and related products - reg.", "published_at": "2026-08-24"},
+        {"title": "DGFT Notification 35/2026-27: Amendment in the Export Policy of Wheat - reg.", "published_at": "2026-08-24"},
+    ]
+    assert len(cluster_raw_items(items)) == 1
+
+
 def test_dedupe_and_cluster_is_a_noop_on_empty_raw_items(conn):
     assert dedupe_and_cluster_new_items(conn, "2026-09-14T06:30:00") == []
