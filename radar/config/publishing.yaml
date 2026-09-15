@@ -8,6 +8,28 @@
 # Editorial cadence comes from STRATEGY/linkedin_strategy.md and
 # STRATEGY/instagram_strategy.md — change the doc and this file together.
 
+# LinkedIn Posts/Images/Videos/Documents/MultiImage API contracts verified
+# against learn.microsoft.com/en-us/linkedin/marketing/community-management/
+# (moniker li-lms-2026-08) on 2026-09-15. The Linkedin-Version header uses
+# YYYYMM; li-lms-2026-08 -> "202608". That page carries an Aug 17 2026
+# deprecation notice against the prior 202508 version and lists monikers
+# through li-lms-2026-08 as of this check — re-verify before this value
+# sunsets, and before this system ever goes live (LinkedIn versions monthly).
+# Instagram Graph API content-publishing contract verified against
+# developers.facebook.com/docs/instagram-platform/content-publishing/ on
+# 2026-09-15; v25.0 was the current version shown in that page's example
+# URLs (the Graph API changelog listed v26.0 as introduced 2026-07-29 —
+# re-check which is actually live before this system ever goes live, Meta
+# ships a new major roughly quarterly and this was not confirmed against a
+# live call).
+platform_apis:
+  linkedin:
+    api_version: "202608"
+  instagram:
+    api_version: "v25.0"
+    reel_status_poll_attempts: 5        # Meta's own docs: "query once per minute, for no more than 5 minutes"
+    reel_status_poll_interval_seconds: 60
+
 # India has no DST, so a fixed offset is exact. Naive schedule times typed at
 # the CLI are read in this offset; everything is stored in UTC.
 timezone_offset: "+05:30"
