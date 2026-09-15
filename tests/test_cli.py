@@ -64,8 +64,8 @@ def test_schedule_is_a_dry_run_by_default(env, capsys, monkeypatch):
     monkeypatch.setattr(subprocess, "run", refuse)
     assert cli.main(["schedule"]) == 0
     out = capsys.readouterr().out
-    assert out.count("schtasks /Create") == 4
-    assert "/ST 05:30" in out and "/ST 06:30" in out and "/ST 21:00" in out
+    assert out.count("schtasks /Create") == 5
+    assert "/ST 05:30" in out and "/ST 06:30" in out and "/ST 19:00" in out and "/ST 21:00" in out
     assert "Dry run" in out
 
 
