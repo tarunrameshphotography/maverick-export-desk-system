@@ -16,6 +16,44 @@ collection:
   # current from old). Undated items are kept — their age can't be judged.
   lookback_days: 21
 
+# --- Source roles (2026-09-15 source-universe expansion) ---
+# One reliability number can't say what a source is *for*. Every source has a
+# tier (defaults: kind primary -> primary_official, secondary -> secondary_media),
+# and each tier rates four separate jobs:
+#   discovery  — how early/likely it surfaces a new story
+#   evidence   — primary: can verify a fact claim (quote machine-checked);
+#                secondary: confirmation/context, can back an attributed
+#                interpretation/opinion but never verifies a fact on its own;
+#                lead_only: starts an investigation, verifies nothing
+#   context    — interpretation, market reaction, implications
+#   saturation — how well it measures whether a story is already widely covered
+# corroborates: false means items from this tier never count toward the
+# two-independent-source rule (scoring gate G1/G4), however many there are.
+# A source may override individual roles with `roles: {context: high}`;
+# `kind` must match its tier's kind (tests/test_source_roles.py enforces it).
+source_tiers:
+  primary_official:   {kind: primary,   evidence: primary,   corroborates: true,  roles: {discovery: high,   context: low,    saturation: low}}
+  trade_data:         {kind: primary,   evidence: primary,   corroborates: true,  roles: {discovery: low,    context: high,   saturation: none}}
+  secondary_media:    {kind: secondary, evidence: secondary, corroborates: true,  roles: {discovery: high,   context: high,   saturation: high}}
+  research_analysis:  {kind: secondary, evidence: secondary, corroborates: true,  roles: {discovery: medium, context: high,   saturation: medium}}
+  trade_body:         {kind: secondary, evidence: secondary, corroborates: true,  roles: {discovery: medium, context: medium, saturation: low}}
+  social_expert:      {kind: secondary, evidence: lead_only, corroborates: false, roles: {discovery: high,   context: medium, saturation: low}}
+  aggregator_repost:  {kind: secondary, evidence: lead_only, corroborates: false, roles: {discovery: low,    context: low,    saturation: none}}
+  field_intelligence: {kind: secondary, evidence: lead_only, corroborates: false, roles: {discovery: high,   context: high,   saturation: none}}
+
+# Independent corroboration != number of URLs. Secondary items are one origin
+# when they share a publisher, share a wire credit (text names the wire, or
+# the item comes from the wire's own domain), or carry near-identical headlines
+# (a syndicated copy). Five outlets running one PTI story = one corroboration.
+provenance:
+  syndication_title_similarity: 0.75
+  wire_services:
+    Reuters: reuters.com
+    PTI: null
+    ANI: null
+    IANS: null
+    Bloomberg: bloomberg.com
+
 sources:
   # --- A. India (core, daily) ---
   - id: dgft_notifications
@@ -145,7 +183,8 @@ sources:
   - id: fieo
     name: FIEO (Federation of Indian Export Organisations)
     url: https://www.fieo.org/
-    kind: primary
+    kind: secondary
+    tier: trade_body
     signal_type: context
     cadence: weekly
     method: manual
@@ -265,15 +304,116 @@ sources:
   # --- E. Other markets (extensible, not yet automated) ---
   - id: uk_trade_remedies_authority
     name: UK Trade Remedies Authority
-    url: https://www.gov.uk/government/organisations/trade-remedies-authority
+    url: https://www.gov.uk/government/organisations/trade-remedies-authority.atom
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: GB
+    category: trade_remedies
+    reliability_1to5: 4
+    active: true
+    notes: "15 Sep 2026: gov.uk serves an Atom feed for every organisation page (probed live, 20 items)."
+
+  - id: ustr_press
+    name: USTR press releases and trade focus
+    url: https://ustr.gov/rss.xml
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: US
+    category: tariffs_trade_remedies
+    reliability_1to5: 5
+    active: true
+    notes: "Probed live 15 Sep 2026 (10 items). Not India-filtered at source; G2 (Indian implication) filters."
+
+  - id: eu_official_journal
+    name: EU Official Journal (L series) / EUR-Lex
+    url: https://eur-lex.europa.eu/oj/direct-access.html
+    kind: primary
+    signal_type: confirm
+    cadence: daily
+    method: manual
+    country: EU
+    category: trade_agreements
+    reliability_1to5: 5
+    active: false
+    notes: "No feed verified this cycle. EU stories are discovered via google_news_eu_trade_india /
+      _cbam_eudr; the OJ instrument is then fetched as the primary document during verification."
+
+  - id: foreign_trade_remedy_authorities
+    name: Other trade-remedy regulators (Canada CBSA SIMA, Australia ADC, Turkey, Brazil SECEX, GCC)
+    url: null
     kind: primary
     signal_type: early
     cadence: weekly
     method: manual
-    country: GB
+    country: INTL
     category: trade_remedies
     reliability_1to5: 4
     active: false
+    notes: "No feed verified this cycle. Discovery comes from google_news_foreign_remedies_on_india and
+      google_news_gcc_trade; the regulator's own notice is fetched during verification."
+
+  # --- Trade data (evidence and context during verification, not discovery feeds) ---
+  - id: tradestat_dgcis
+    name: TradeStat (Dept of Commerce / DGCI&S) export data
+    url: https://tradestat.commerce.gov.in/
+    kind: primary
+    tier: trade_data
+    signal_type: context
+    cadence: monthly
+    method: manual
+    country: IN
+    category: trade_data
+    reliability_1to5: 5
+    active: false
+    notes: "No API; figures are looked up during verification and recorded with claim-add --source-type primary."
+
+  - id: un_comtrade
+    name: UN Comtrade (India -> destination values)
+    url: https://comtradeapi.un.org/
+    kind: primary
+    tier: trade_data
+    signal_type: context
+    cadence: on_demand
+    method: manual
+    country: INTL
+    category: trade_data
+    reliability_1to5: 4
+    active: false
+    notes: "Queried per signal by radar/pipeline/exposure_lookup.py (exposure line), not collected as news."
+
+  - id: itc_trade_map_gta
+    name: ITC Trade Map / Market Access Map / Global Trade Alert
+    url: https://www.trademap.org/
+    kind: secondary
+    tier: research_analysis
+    signal_type: context
+    cadence: on_demand
+    method: manual
+    country: INTL
+    category: trade_data
+    reliability_1to5: 4
+    active: false
+    notes: "Trade Map needs a login; GTA has no verified feed. Used manually for context; GTA-cited
+      stories still arrive through google_news_global_trade_alert."
+
+  # --- Logistics ---
+  - id: carrier_and_port_advisories
+    name: Carrier advisories (Maersk/MSC/Hapag-Lloyd/CMA CGM) and Indian port authorities
+    url: null
+    kind: primary
+    signal_type: early
+    cadence: daily
+    method: manual
+    country: INTL
+    category: logistics
+    reliability_1to5: 4
+    active: false
+    notes: "Carrier advisory pages are JS apps with no public feed; freight indexes (Drewry WCI, SCFI,
+      FBX) are licensed. Not scraped. Logistics discovery runs through google_news_logistics."
 
   - id: gacc_china
     name: China GACC (General Administration of Customs)
@@ -380,11 +520,288 @@ sources:
     reliability_1to5: 4
     active: true
 
+  # News is discovery + confirmation + context + saturation, not noise. Every
+  # feed below was probed live on 15 Sep 2026. Reuters has no public RSS
+  # (discontinued 2020), so it is reached through a Google News site: query.
+  - id: google_news_reuters_india_trade
+    name: Reuters — India trade, tariffs, exports (via Google News)
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: INTL
+    category: news_confirmation
+    reliability_1to5: 4
+    active: true
+    query: "site:reuters.com India (tariff OR exports OR trade deal)"
+
+  - id: mint_economy
+    name: Mint — Economy
+    url: https://www.livemint.com/rss/economy
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 4
+    active: true
+
+  - id: businessline_economy
+    name: BusinessLine — Economy
+    url: https://www.thehindubusinessline.com/economy/feeder/default.rss
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 4
+    active: true
+
+  - id: et_economy
+    name: Economic Times — Economy
+    url: https://economictimes.indiatimes.com/news/economy/rssfeeds/1373380680.cms
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 4
+    active: true
+    notes: "Replaces the retired foreign-trade feed (et_foreign_trade)."
+
+  - id: financial_express_economy
+    name: Financial Express — Economy
+    url: https://www.financialexpress.com/economy/feed/
+    kind: secondary
+    signal_type: confirm
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 4
+    active: false
+    notes: "Probe 15 Sep 2026: feed XML is malformed (parser error at line 3). FE coverage still arrives via Google News queries."
+
+  - id: google_news_fibre2fashion
+    name: Fibre2Fashion — textiles/apparel exports (via Google News)
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 3
+    active: true
+    query: "site:fibre2fashion.com India exports"
+
+  - id: google_news_eu_trade_india
+    name: Google News — EU trade policy and India
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: EU
+    category: trade_agreements
+    reliability_1to5: 3
+    active: true
+    query: "site:ec.europa.eu OR site:policy.trade.ec.europa.eu India trade"
+    notes: "Returns EC pages and media coverage mixed (17 publishers in probe), so it is tiered secondary;
+      the EC/OJ document is fetched as the primary during verification."
+
+  - id: google_news_gcc_trade
+    name: Google News — UAE / Saudi / GCC trade measures affecting India
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: GCC
+    category: trade_agreements
+    reliability_1to5: 3
+    active: true
+    query: "(UAE OR Saudi OR GCC) India (exports OR CEPA OR tariff OR import ban)"
+
+  - id: google_news_china_gacc_india
+    name: Google News — China GACC measures and Indian exports
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: CN
+    category: customs_other
+    reliability_1to5: 3
+    active: true
+    query: "China GACC India (exports OR registration OR ban)"
+
+  - id: google_news_rasff_india
+    name: Google News — EU RASFF alerts on Indian consignments
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: enforced
+    cadence: daily
+    method: rss
+    country: EU
+    category: sps_food_alert
+    reliability_1to5: 3
+    active: true
+    query: "RASFF India (rejection OR alert) exports"
+    notes: "Discovery path for the Rejection Watch franchise while the RASFF portal itself stays manual (eu_rasff)."
+
+  - id: google_news_logistics
+    name: Google News — freight, shipping and port disruption for Indian exporters
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: early
+    cadence: daily
+    method: rss
+    country: INTL
+    category: logistics
+    reliability_1to5: 3
+    active: true
+    query: "(freight rates OR container shipping OR Red Sea OR port congestion) Indian exporters"
+
+  - id: google_news_global_trade_alert
+    name: Google News — Global Trade Alert findings on India
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: context
+    cadence: daily
+    method: rss
+    country: INTL
+    category: news_confirmation
+    reliability_1to5: 3
+    active: true
+    query: "\"Global Trade Alert\" India"
+
+  # --- Research / analysis / trade bodies (context first, discovery second) ---
+  - id: google_news_gtri
+    name: GTRI analysis as reported (via Google News)
+    url: https://news.google.com/rss/search
+    kind: secondary
+    signal_type: context
+    cadence: daily
+    method: rss
+    country: IN
+    category: news_confirmation
+    reliability_1to5: 3
+    active: true
+    query: "\"Global Trade Research Initiative\" OR GTRI exports"
+    notes: "GTRI publishes through media rather than a feed; items are media reports of GTRI analysis,
+      so the tier stays secondary_media (context: high)."
+
+  - id: think_tanks_trade
+    name: ICRIER / RIS / ORF / CSEP trade research (via Google News site-restricted query)
+    url: https://news.google.com/rss/search
+    kind: secondary
+    tier: research_analysis
+    signal_type: context
+    cadence: daily
+    method: rss
+    country: IN
+    category: research
+    reliability_1to5: 4
+    active: true
+    query: "(site:icrier.org OR site:ris.org.in OR site:orfonline.org OR site:csep.org) trade"
+
+  - id: law_firm_trade_alerts
+    name: Law-firm customs / trade-remedy alerts (via Google News)
+    url: https://news.google.com/rss/search
+    kind: secondary
+    tier: research_analysis
+    signal_type: context
+    cadence: daily
+    method: rss
+    country: IN
+    category: research
+    reliability_1to5: 3
+    active: true
+    query: "(customs OR trade remedy OR anti-dumping) India law firm alert"
+
+  - id: export_promotion_councils
+    name: EPCs / commodity boards / FIEO statements (via Google News)
+    url: https://news.google.com/rss/search
+    kind: secondary
+    tier: trade_body
+    signal_type: context
+    cadence: daily
+    method: rss
+    country: IN
+    category: export_promotion
+    reliability_1to5: 3
+    active: true
+    query: "(export promotion council OR FIEO OR AEPC OR EEPC OR Spices Board OR APEDA) exports"
+
+  # --- Social / expert leads (manual intake — `radar lead-add`) ---
+  # Not automated, on purpose: LinkedIn offers no API for reading other
+  # people's posts and forbids scraping; X's read API is a paid tier. Leads
+  # are pasted in by the analyst and enter the same raw_items -> signal
+  # pipeline, but their tier is lead_only: they can start an investigation,
+  # never verify a claim or count as corroboration.
+  - id: official_social_posts
+    name: Official government / regulator / ministry / EPC social posts (X, LinkedIn)
+    url: null
+    kind: secondary
+    tier: social_expert
+    signal_type: early
+    cadence: continuous
+    method: manual
+    country: INTL
+    category: social_lead
+    reliability_1to5: 3
+    active: false
+    notes: "An official account's post is still a lead until the gazette/notification it announces is found."
+
+  - id: expert_social_posts
+    name: Credible trade journalists, researchers, practitioners (LinkedIn, X)
+    url: null
+    kind: secondary
+    tier: social_expert
+    signal_type: early
+    cadence: continuous
+    method: manual
+    country: INTL
+    category: social_lead
+    reliability_1to5: 2
+    active: false
+
+  - id: unverified_reposts
+    name: Reposts, forwards, unknown accounts
+    url: null
+    kind: secondary
+    tier: aggregator_repost
+    signal_type: early
+    cadence: continuous
+    method: manual
+    country: INTL
+    category: social_lead
+    reliability_1to5: 1
+    active: false
+
+  - id: manual_news_lead
+    name: News article spotted by the analyst (paywalled, or no feed caught it)
+    url: null
+    kind: secondary
+    signal_type: confirm
+    cadence: continuous
+    method: manual
+    country: INTL
+    category: news_confirmation
+    reliability_1to5: 3
+    active: false
+
   # --- G. Proprietary (the moat, per spec — not a URL collector) ---
   - id: field_notes
     name: Proprietary field notes (advisory calls, LEAP questions, CHA network)
     url: null
-    kind: primary
+    kind: secondary
+    tier: field_intelligence
     signal_type: early
     cadence: continuous
     method: manual
@@ -392,4 +809,6 @@ sources:
     category: field_intelligence
     reliability_1to5: 5
     active: false
-    notes: "Section 4 Group F. Needs a 60-second intake form, not a collector. Out of scope for v1 automation; add as a manual raw_items entry point."
+    notes: "Section 4 Group F. Manual intake via `radar lead-add field_notes` — anonymise before entry
+      (no client names, no personal data). Lead-only: a field note starts an investigation, it is never
+      published as a verified fact."

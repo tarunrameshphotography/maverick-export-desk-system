@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import sqlite3
 from datetime import date
-from urllib.parse import urlsplit
 
 from radar.pipeline.classify import classify_topic_category
 from radar.pipeline.dedupe import dedupe_and_cluster_new_items
@@ -15,35 +14,34 @@ from radar.pipeline.entities import extract_entities, persist_entities
 from radar.pipeline.exposure import analyze_indian_exposure
 from radar.pipeline.saturation import compute_saturation
 from radar.pipeline.scoring import score_signal
+from radar.pipeline.source_roles import corroborating_origin_count
 from radar.pipeline.verify import build_claims_table
 
 
 def _signal_text_and_sources(conn: sqlite3.Connection, signal_id: str) -> tuple[str, bool, int]:
-    """Returns (combined text, has primary evidence, number of independent secondary publishers).
+    """Returns (combined text, has primary evidence, number of independent corroborating origins).
 
     Primary evidence = a raw item collected from a primary source, OR a claim an
     analyst verified against a primary document (Part 12: confidence 1.0 is
-    'primary-verified'). Secondary independence is counted by publisher domain,
-    so two items from one outlet never satisfy the two-source rule."""
-    rows = conn.execute(
+    'primary-verified'). Corroboration counts independent origins, not URLs:
+    one outlet, one wire story syndicated five times, or near-identical
+    headlines are one origin; lead-only tiers (social, reposts, field notes)
+    never count (source_roles.py)."""
+    rows = [dict(r) for r in conn.execute(
         """
-        SELECT ri.title, ri.body_text, ri.canonical_url, ri.url, ri.publisher, s.kind
+        SELECT ri.title, ri.body_text, ri.canonical_url, ri.url, ri.publisher, ri.source_id, s.kind
         FROM raw_items ri JOIN sources s ON s.id = ri.source_id
         WHERE ri.signal_id = ?
         """,
         (signal_id,),
-    ).fetchall()
+    ).fetchall()]
     text = " ".join(f"{r['title']} {r['body_text'] or ''}" for r in rows)
     verified_primary = conn.execute(
         "SELECT COUNT(*) AS n FROM claims WHERE signal_id = ? AND status = 'verified' AND source_type = 'primary'",
         (signal_id,),
     ).fetchone()["n"]
     has_primary = any(r["kind"] == "primary" for r in rows) or verified_primary > 0
-    secondary_publishers = {
-        (r["publisher"] or urlsplit(r["canonical_url"] or r["url"] or "").netloc).removeprefix("www.")
-        for r in rows if r["kind"] == "secondary"
-    } - {""}
-    return text, has_primary, len(secondary_publishers)
+    return text, has_primary, corroborating_origin_count(rows)
 
 
 def process_signal(conn: sqlite3.Connection, signal_id: str, now_iso: str, reference_date: date | None = None) -> dict:

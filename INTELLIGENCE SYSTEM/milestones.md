@@ -339,6 +339,63 @@ the full detail, including the final integration-review fix pass
 (2026-09-15) that closed a migration FK bug and a permanent-skip retry
 defect found during that review.
 
+## Source-universe expansion: DONE (2026-09-15)
+
+Goal: stop being a "government/regulatory news collector" and become a broad
+discovery system that still only lets primary-verified facts into content.
+
+**Before:** 16 active sources (of 26 registered) — Indian regulators (DGFT
+×3, CBIC, DGTR, RBI, PIB), US Federal Register ×2, WTO news, Business
+Standard, 5 Google News queries. **After:** 33 active of 53 registered. Reliability was one number plus `kind: primary|secondary`; the two-
+source rule counted distinct publisher domains; clustering was greedy
+single-link and only within one run's new items.
+
+**Built:**
+- `sources.yaml` `source_tiers` (primary_official, trade_data,
+  secondary_media, research_analysis, trade_body, social_expert,
+  aggregator_repost, field_intelligence) rating discovery / evidence /
+  context / saturation separately; `provenance` config (syndication
+  threshold, wire services). `radar/pipeline/source_roles.py` resolves them.
+- 17 newly active sources (16 new + UK TRA switched from manual to its
+  Atom feed), each probed live 15 Sep 2026: Reuters (Google News
+  site: query — no public RSS), Mint, BusinessLine, ET Economy, Fibre2Fashion,
+  USTR RSS, UK Trade Remedies Authority Atom, EU trade/India, GCC, China GACC,
+  RASFF-on-India, logistics/freight, Global Trade Alert, GTRI, ICRIER/RIS/
+  ORF/CSEP, law-firm alerts, EPC/commodity boards. 11 new registered-but-
+  manual entries (EU OJ, other trade-remedy regulators, TradeStat, Comtrade,
+  ITC Trade Map/GTA, carrier/port advisories, FE feed, 4 social/manual-lead
+  sources); FIEO and field_notes re-tiered (no longer "primary").
+- Evidence gate (`verify.py::_check_evidence_authority`): fact/verify claims
+  verify only against primary sources; secondary can back attributed
+  interpretation/opinion; lead-only verifies nothing; a collected secondary
+  URL can't be relabelled primary.
+- Corroboration counts independent origins (`corroborating_origin_count`),
+  not URLs; lead-only tiers never count toward G1/G4.
+- Clustering: majority-link for title similarity (strong keys still chain);
+  new items attach to matching signals from the last 10 days across runs; a
+  later primary becomes the signal's primary; automated-status signals are
+  re-queued for scoring, human-advanced ones are left alone. Claim
+  extraction is now idempotent per source URL so a late primary's claims
+  are extracted.
+- Manual intake `radar lead-add` and `radar provenance <signal>`.
+- Tests: `tests/test_source_roles.py` (19) + 2 chaining regressions in
+  `test_dedupe.py`. Suite 323 → 344.
+
+**Live smoke (scratch DB, 15 Sep 2026):** 33 sources checked, 476 items, 0
+source failures. Before the clustering fix the largest signal merged 25
+unrelated items (EU FTA + Mercosur + inflation + trade deficit — all
+title-similarity links, no strong keys); after, the largest is one real event
+(US final AD/CVD on solar cells from India/Indonesia/Laos: 14 reports → 7
+independent origins). A LinkedIn lead added on a later run attached to that
+signal as a discovery lead, with no primary and no corroboration credit.
+
+**Residual gaps:** some mixing remains in small (2-7 item) clusters where
+generic tokens ("trade", "exports") carry similarity; no "conflicting
+reports" detection; a signal re-opened by late coverage re-extracts entities
+but not the Desk Sheet history; saturation still counts lead-only items
+(harmless today — they are manual and rare); no primary feed yet for EU OJ,
+ePing, RASFF, GACC, CBSA/ADC.
+
 ## Not started (see roadmap.md for detail)
 - Phase 6 (partial): live metrics ingestion from platform APIs — CSV import
   and the weight-learning loop already exist and work.

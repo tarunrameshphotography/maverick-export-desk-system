@@ -50,11 +50,10 @@ def extract_candidate_claims(text: str) -> list[str]:
 
 def build_claims_table(conn: sqlite3.Connection, signal_id: str) -> int:
     """Populates claims (status='pending', claim_type='verify') from every
-    raw_item linked to the signal. Idempotent: skips if claims already exist
-    for this signal. Returns the number of claims inserted."""
-    existing = conn.execute("SELECT COUNT(*) AS n FROM claims WHERE signal_id = ?", (signal_id,)).fetchone()["n"]
-    if existing:
-        return 0
+    raw_item linked to the signal. Idempotent per source: an item whose URL
+    already has claims is skipped, so a primary document that joins the signal
+    on a later run still gets its claims extracted. Returns the number inserted."""
+    seen_urls = {r["source_url"] for r in conn.execute("SELECT source_url FROM claims WHERE signal_id = ?", (signal_id,))}
 
     rows = conn.execute(
         """
@@ -67,6 +66,8 @@ def build_claims_table(conn: sqlite3.Connection, signal_id: str) -> int:
 
     inserted = 0
     for row in rows:
+        if (row["canonical_url"] or row["url"]) in seen_urls:
+            continue
         for claim_text in extract_candidate_claims(f"{row['title']}. {row['body_text'] or ''}"):
             conn.execute(
                 """
@@ -97,6 +98,50 @@ def _check_quote(conn: sqlite3.Connection, signal_id: str, source_url: str | Non
     return "Quote machine-checked against the stored copy of the source."
 
 
+FACT_CLAIM_TYPES = {"fact", "verify"}
+
+
+def _collected_source_evidence(conn: sqlite3.Connection, signal_id: str, source_url: str | None) -> str | None:
+    """Evidence level of the collected item this URL came from, if it is one of
+    the signal's raw_items; None for a URL found during research."""
+    from radar.pipeline.source_roles import profile_for
+
+    if not source_url:
+        return None
+    row = conn.execute(
+        """
+        SELECT ri.source_id, s.kind FROM raw_items ri JOIN sources s ON s.id = ri.source_id
+        WHERE ri.signal_id = ? AND (ri.url = ? OR ri.canonical_url = ?)
+        """,
+        (signal_id, source_url, source_url),
+    ).fetchone()
+    return profile_for(row["source_id"], row["kind"])["evidence"] if row else None
+
+
+def _check_evidence_authority(
+    conn: sqlite3.Connection, signal_id: str, source_url: str | None, source_type: str, claim_type: str
+) -> None:
+    """A secondary source can start an investigation; it cannot verify a fact.
+    Fact claims verify only against a primary source; lead-only sources (social,
+    reposts, field notes) verify nothing. A collected secondary URL can't be
+    relabelled primary to get past this."""
+    collected = _collected_source_evidence(conn, signal_id, source_url)
+    if source_type == "primary" and collected not in (None, "primary"):
+        raise ValueError(f"{source_url} was collected from a {collected} source; it can't be recorded as primary evidence.")
+    level = collected or source_type
+    if level == "lead_only":
+        raise ValueError(
+            "Lead-only source (social post, repost, field note): it can start an investigation but verifies "
+            "nothing. Find the primary document and record the claim against it (claim-add --source-type primary)."
+        )
+    if claim_type in FACT_CLAIM_TYPES and level != "primary":
+        raise ValueError(
+            "A fact claim can only be verified against a primary source. This source is secondary — record the "
+            "claim against the primary document (claim-add --source-type primary), or classify it as an "
+            "attributed interpretation/opinion."
+        )
+
+
 def add_claim(
     conn: sqlite3.Connection,
     signal_id: str,
@@ -118,6 +163,10 @@ def add_claim(
     if source_type not in ("primary", "secondary"):
         raise ValueError(f"Invalid source type: {source_type}")
     status = "verified" if source_quote else "pending"
+    if source_quote:
+        _check_evidence_authority(conn, signal_id, source_url, source_type, claim_type)
+    elif source_type == "primary":
+        _check_evidence_authority(conn, signal_id, source_url, source_type, "opinion")
     note = _check_quote(conn, signal_id, source_url, source_quote) if source_quote else None
     cur = conn.execute(
         """
@@ -151,9 +200,14 @@ def mark_claim(
     if status == "verified" and not source_quote:
         raise ValueError("Cannot mark a claim verified without a source_quote (no claim without a quote).")
     if status == "verified":
-        claim = conn.execute("SELECT signal_id, source_url FROM claims WHERE id = ?", (claim_id,)).fetchone()
+        claim = conn.execute(
+            "SELECT signal_id, source_url, source_type, claim_type FROM claims WHERE id = ?", (claim_id,)
+        ).fetchone()
         if claim is None:
             raise ValueError(f"No such claim: {claim_id}")
+        _check_evidence_authority(
+            conn, claim["signal_id"], claim["source_url"], claim["source_type"], claim_type or claim["claim_type"]
+        )
         provenance = _check_quote(conn, claim["signal_id"], claim["source_url"], source_quote)
         notes = f"{notes} | {provenance}" if notes else provenance
 

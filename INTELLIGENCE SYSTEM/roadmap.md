@@ -29,8 +29,8 @@ human today.
 
 | # | Stage | State | Where it lives |
 |---|---|---|---|
-| A | Collect | **Done** | `radar/collectors/` (RSS, Federal Register API, DGFT/CBIC page-watch + API, sample fixture) |
-| B | Normalize & dedupe | **Done** | `radar/pipeline/normalize.py`, `dedupe.py` |
+| A | Collect | **Done; source universe broadened 2026-09-15** — 33 active sources (of 53 registered) across regulators, foreign officials, news, research, trade bodies; social/field leads via manual `lead-add`; each source tiered by discovery/evidence/context/saturation role | `radar/collectors/`, `config/sources.yaml`, `radar/pipeline/source_roles.py` |
+| B | Normalize & dedupe | **Done** — majority-link clustering + cross-run attachment to recent signals (2026-09-15) | `radar/pipeline/normalize.py`, `dedupe.py` |
 | C | Triage / entity extraction | **Done** (rule-based, deliberately not model-based — see below) | `radar/pipeline/entities.py`, `classify.py` |
 | D | Score & saturation | **Done** | `radar/pipeline/scoring.py`, `saturation.py` |
 | E | Morning Desk Sheet (human picks lead) | **Done** | `radar/desk/desk_sheet.py` |
@@ -41,7 +41,7 @@ human today.
 | J | Quality control (lint, disclosure, risk tier, checklist) | **Done** | `radar/content/drafts.py::lint_draft`, `set_draft_status` |
 | K | Publishing queue (status/approval workflow) | **Done (Phase 3, 2026-09-15)** — queue schema, lifecycle state machine, scheduling, dispatch seam and CLI, now with `tests/test_publishing_queue.py` (36 tests) and a live CLI walkthrough on a scratch DB. See milestones.md "Phase 3 — DONE" | `radar/publishing/`, migration `006`, `tests/test_publishing_queue.py` |
 | L | Social publishing integrations (LinkedIn/Instagram APIs) | **Code built and tested (2026-09-15); `auto_publish` gate still closed by design** — see Phase 4 below | `radar/publishing/linkedin.py`, `radar/publishing/instagram.py` |
-| M | Daily orchestrator / scheduler | **Partially done** — collection is scheduled (`radar schedule`); content generation and publishing are not | `radar/runner.py`, `config/schedule.yaml` |
+| M | Daily orchestrator / scheduler | **Done (Phase 5)** — collection and content generation are scheduled; approval, queueing and publishing stay human | `radar/runner.py`, `config/schedule.yaml` |
 | N | Performance capture & learning loop | **Done** for the metrics/Calls-Ledger side; no live API-based metrics ingestion yet (CSV import only) | `radar/desk/performance.py`, `calls_ledger.py` |
 
 ## Why "hybrid" was the default, and what changed this cycle
@@ -169,6 +169,19 @@ Extend `radar/runner.py` / `config/schedule.yaml` (which already knows how to
 register Windows Scheduled Tasks) to run content generation and queue
 placement on a schedule, not just collection. Publishing itself stays manual
 until Phase 4 is live and the flag is deliberately flipped.
+
+### Source-universe expansion (done, 2026-09-15 — prerequisite for Phase 6)
+Broad discovery → cross-source validation → primary verification. Sources
+are tiered by role (`sources.yaml` `source_tiers`); news is discovery +
+confirmation + context + saturation, never noise and never primary evidence;
+social/field leads enter through `radar lead-add` as lead-only; fact claims
+verify only against primary sources (`verify.py`); corroboration counts
+independent origins, not syndicated copies; one event across sources and
+across runs is one signal (`dedupe.py`), with `radar provenance` showing who
+said what in which role. Full detail, live-run evidence and residual gaps in
+milestones.md. Next source work, in priority order: an inbox connector for
+WTO ePing (the best early-warning primary), an EU Official Journal feed,
+and conflicting-report detection.
 
 ### Phase 6 — Feedback learning loop
 `desk/performance.py` and `calls_ledger.py` already implement weight-proposal

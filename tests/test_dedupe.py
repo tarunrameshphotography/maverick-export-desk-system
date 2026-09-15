@@ -130,3 +130,25 @@ def test_wheat_and_wheat_flour_policy_moves_same_day_stay_together():
 
 def test_dedupe_and_cluster_is_a_noop_on_empty_raw_items(conn):
     assert dedupe_and_cluster_new_items(conn, "2026-09-14T06:30:00") == []
+
+
+def _scripted_similarity(monkeypatch, table):
+    from radar.pipeline import dedupe
+
+    monkeypatch.setattr(dedupe, "similarity_score",
+                        lambda a, b: table.get(frozenset((a["title"], b["title"])), 0.0))
+
+
+def test_title_similarity_does_not_chain_an_unrelated_story_into_a_cluster(monkeypatch):
+    # A, B, C are one event; D resembles only C. Single-link chaining used to
+    # pull D in (live run 15 Sep 2026: trade-deficit stories joined an FTA cluster).
+    _scripted_similarity(monkeypatch, {frozenset(p): 0.5 for p in [("A", "B"), ("A", "C"), ("B", "C"), ("C", "D")]})
+    clusters = cluster_raw_items([{"title": t} for t in "ABCD"])
+    assert [[i["title"] for i in c] for c in clusters] == [["A", "B", "C"], ["D"]]
+
+
+def test_strong_key_match_with_one_member_still_joins_the_cluster(monkeypatch):
+    table = {frozenset(p): 0.5 for p in [("A", "B"), ("A", "C"), ("B", "C")]}
+    table[frozenset(("C", "D"))] = 1.0  # same notification number
+    _scripted_similarity(monkeypatch, table)
+    assert len(cluster_raw_items([{"title": t} for t in "ABCD"])) == 1

@@ -57,6 +57,32 @@ def insert_raw_item(conn: sqlite3.Connection, item: RawItem) -> bool:
     return True
 
 
+def add_manual_lead(
+    conn: sqlite3.Connection,
+    source_id: str,
+    title: str,
+    url: str,
+    body_text: str = "",
+    published_at: str | None = None,
+    publisher: str | None = None,
+) -> int | None:
+    """Manual intake for sources with no legitimate automated access (social
+    posts, field notes, paywalled articles). The lead becomes an ordinary NEW
+    raw_item, so the next pipeline run clusters, scores and verifies it like
+    anything collected. Returns the raw_item id, or None if it was a duplicate."""
+    source = next((s for s in settings.sources() if s["id"] == source_id), None)
+    if source is None:
+        raise ValueError(f"Unknown source: {source_id}")
+    if source["method"] != "manual":
+        raise ValueError(f"{source_id} is collected automatically ({source['method']}); manual intake is for method: manual sources.")
+    item = RawItem(source_id=source_id, title=title, url=url, body_text=body_text or "",
+                   published_at=published_at, publisher=publisher)
+    if not insert_raw_item(conn, item):
+        return None
+    conn.commit()
+    return conn.execute("SELECT MAX(id) AS id FROM raw_items WHERE source_id = ?", (source_id,)).fetchone()["id"]
+
+
 def is_stale(item: RawItem, lookback_days: int, today: date | None = None) -> bool:
     """True when the item is dated and older than the lookback window. Undated
     items are never stale — their age can't be judged, so they're kept."""

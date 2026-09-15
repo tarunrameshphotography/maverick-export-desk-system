@@ -142,15 +142,24 @@ def similarity_score(item_a: dict, item_b: dict) -> float:
     return 0.7 * title_sim + 0.3 * entity_sim
 
 
+def _joins(item: dict, cluster: list[dict], threshold: float) -> bool:
+    """A strong-key match (same document, instrument+date, product+country)
+    with any member is an identity link. Title/entity similarity alone must
+    hold against at least half the cluster: single-link chaining on titles
+    merged EU-FTA, Mercosur, inflation and trade-deficit stories into one
+    signal once the broader news feeds were added (live run, 15 Sep 2026)."""
+    scores = [similarity_score(item, member) for member in cluster]
+    if any(score == 1.0 for score in scores):
+        return True
+    return sum(score >= threshold for score in scores) * 2 >= len(cluster)
+
+
 def cluster_raw_items(raw_items: list[dict], threshold: float = TITLE_SIMILARITY_THRESHOLD) -> list[list[dict]]:
-    """Greedy single-link clustering: an item joins the first cluster containing
-    *any* member it is similar enough to, else starts a new cluster.
-    Deterministic given a stable input order."""
+    """Greedy clustering: an item joins the first cluster it links to (see
+    _joins), else starts a new cluster. Deterministic given a stable input order."""
     clusters: list[list[dict]] = []
     for item in raw_items:
-        home = next(
-            (c for c in clusters if any(similarity_score(item, member) >= threshold for member in c)), None
-        )
+        home = next((c for c in clusters if _joins(item, c, threshold)), None)
         if home is None:
             clusters.append([item])
         else:
@@ -204,14 +213,59 @@ def create_signal_for_cluster(conn: sqlite3.Connection, cluster: list[dict], now
     return signal_id
 
 
+AUTOMATED_STATUSES = ("TRIAGED", "SCORED")
+
+
+def attach_to_existing_signals(conn: sqlite3.Connection, items: list[dict], now_iso: str) -> list[dict]:
+    """Coverage arrives over days: DGFT notifies on Monday, Reuters reports on
+    Tuesday. A new item that links to a recent signal (same _joins rule) joins
+    it instead of opening a second story. A primary document arriving after the
+    news takes over as the signal's primary source; signals still in an
+    automated status are re-queued for scoring, human-advanced ones are left
+    alone. Returns the items that attached to nothing."""
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=DATE_WINDOW_DAYS)).isoformat()
+    groups: dict[str, list[dict]] = {}
+    for row in conn.execute(
+        "SELECT * FROM raw_items WHERE status = 'CLUSTERED' AND signal_id IS NOT NULL AND collected_at >= ? ORDER BY id",
+        (cutoff,),
+    ):
+        groups.setdefault(row["signal_id"], []).append(dict(row))
+    if not groups:
+        return items
+    kinds = {r["id"]: r["kind"] for r in conn.execute("SELECT id, kind FROM sources")}
+    remaining = []
+    for item in items:
+        signal_id = next((sid for sid, members in groups.items() if _joins(item, members, TITLE_SIMILARITY_THRESHOLD)), None)
+        if signal_id is None:
+            remaining.append(item)
+            continue
+        conn.execute("UPDATE raw_items SET signal_id = ?, status = 'CLUSTERED' WHERE id = ?", (signal_id, item["id"]))
+        if kinds.get(item["source_id"]) == "primary":
+            conn.execute(
+                "UPDATE signals SET title = ?, primary_source_url = ?, lifecycle_stage = 'notified', updated_at = ? "
+                "WHERE id = ? AND lifecycle_stage = 'reported'",
+                (item["title"], item.get("canonical_url") or item.get("url"), now_iso, signal_id),
+            )
+        requeued = conn.execute(
+            f"UPDATE signals SET status = 'TRIAGED', updated_at = ? WHERE id = ? AND status IN {AUTOMATED_STATUSES}",
+            (now_iso, signal_id),
+        ).rowcount
+        if requeued:
+            conn.execute("DELETE FROM signal_entities WHERE signal_id = ?", (signal_id,))
+        groups[signal_id].append(item)
+    return remaining
+
+
 def dedupe_and_cluster_new_items(conn: sqlite3.Connection, now_iso: str) -> list[str]:
-    """Pulls every raw_item with status='NEW', clusters them, and creates one
-    signals row per cluster. Returns the list of new signal_ids."""
+    """Pulls every raw_item with status='NEW', attaches those that belong to a
+    recent existing signal, clusters the rest, and creates one signals row per
+    cluster. Returns the list of new signal_ids."""
     rows = conn.execute("SELECT * FROM raw_items WHERE status = 'NEW'").fetchall()
     items = [dict(row) for row in rows]
     if not items:
         return []
     items.sort(key=lambda i: i.get("published_at") or "")
+    items = attach_to_existing_signals(conn, items, now_iso)
     clusters = cluster_raw_items(items)
     signal_ids = [create_signal_for_cluster(conn, cluster, now_iso) for cluster in clusters]
     conn.commit()

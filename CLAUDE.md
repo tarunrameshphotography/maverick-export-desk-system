@@ -37,9 +37,11 @@ config file can hold it instead (scoring weights, content rules, source
 registry, clusters, schedule).
 
 ```
-radar/collectors/   RSS, Federal Register API, DGFT/CBIC page-watch + API, sample fixture
+radar/collectors/   RSS, Federal Register API, DGFT/CBIC page-watch + API, sample fixture,
+                     manual lead intake (registry.add_manual_lead / `radar lead-add`)
 radar/pipeline/      normalize -> dedupe/cluster -> entities -> classify -> exposure ->
-                     saturation -> scoring -> verify -> evidence -> angles -> orchestrator
+                     saturation -> scoring -> verify -> evidence -> angles -> orchestrator;
+                     source_roles.py (source tiers, independent origins, provenance)
 radar/desk/          Desk Sheet, approvals (state machine), Calls Ledger, performance/learning
 radar/content/       drafts.py — content scaffolding + the pre-publish checklist;
                      generation.py — Phase 2 prose generation (grounded LLM
@@ -52,8 +54,8 @@ radar/db/            schema.sql (baseline) + migrations/NNN_*.sql (always applie
 radar/cli.py         every day-to-day command (see RADAR_README.md)
 ```
 
-Run `python -m pytest tests/ -q` before and after any change — **270 tests**,
-all passing as of this writing. If a change drops that number without an
+Run `python -m pytest tests/ -q` before and after any change — **344 tests**,
+all passing as of 2026-09-15 (source-universe expansion). If a change drops that number without an
 explicit, understood reason, stop and fix it before continuing.
 
 ## Phase 3 — Publishing queue: DONE (2026-09-15)
@@ -132,6 +134,19 @@ requiring the founder's explicit sign-off, not an obvious next step.
   URL and a quoted passage that machine-checks against the stored primary
   document for every fact-type claim. `lint_draft` rejects any number in a
   draft that doesn't trace back to a verified claim.
+- **Discovery is not evidence.** Every source has a tier in `sources.yaml`
+  (`source_tiers`) rating discovery / evidence / context / saturation
+  separately — news is a legitimate discovery, confirmation, context and
+  saturation source, never "noise" and never primary evidence.
+  `verify.py::_check_evidence_authority` lets a fact claim verify only
+  against a primary source, lets secondary sources back only attributed
+  interpretation/opinion, and lets lead-only tiers (social posts, reposts,
+  field notes) verify nothing; a collected secondary URL can't be relabelled
+  primary. The two-source rule counts independent origins, not URLs
+  (`source_roles.corroborating_origin_count`: same outlet / same wire credit
+  / near-identical headline = one origin; lead-only never counts). Social
+  platforms are manual intake (`radar lead-add`), not scraped. See
+  `tests/test_source_roles.py` and RADAR_README.md's "Source universe".
 - **"Unknown"/"uncertain" is a valid, expected answer**, not a failure.
   `exposure.py`'s tribool fields return `"uncertain"` rather than guessing.
   Never change a function to "always return something" if the honest answer
@@ -165,8 +180,11 @@ requiring the founder's explicit sign-off, not an obvious next step.
   merge two unrelated stories and leak an unrelated cluster/HS tag onto a
   signal (observed live on sample data: a RoDTEP notice picking up an
   unrelated "Coimbatore / engineering goods" tag). Mitigated at the
-  exposure-line boundary (never join a stated code with an inferred one);
-  root cause is in dedupe/clustering and is still open — see roadmap.md.
+  exposure-line boundary (never join a stated code with an inferred one).
+  Clustering was tightened 2026-09-15 (title similarity must hold against
+  half the cluster; strong keys still chain; new items attach to recent
+  signals across runs), which removed the 25-item mixed cluster seen live,
+  but generic tokens can still merge small clusters — see milestones.md.
 - HS-code inference is chapter-level only (from `clusters.yaml`'s
   `hs_chapters`), confidence 0.4, and only fires when nothing more specific
   is stated. It is a *lead*, not a tariff classification — every place it
@@ -200,13 +218,10 @@ requiring the founder's explicit sign-off, not an obvious next step.
 
 ## Git / repository state
 
-- No remote was configured as of this session's start; `gh` is authenticated
-  to GitHub account `tarunrameshphotography`. If you need to push, check
-  `git remote -v` fresh (don't assume a memory of this file is still
-  current) and confirm the target repo with the user before creating one or
-  force-pushing anything.
-- Single branch (`master`) as of this session; 14 commits before this
-  session's work.
+- `origin` is `github.com/tarunrameshphotography/maverick-export-desk-system`
+  (as of 2026-09-15); `gh` is authenticated to that account. Still check
+  `git remote -v` fresh before pushing, and never force-push without asking.
+- Single branch (`master`).
 - Commit messages in this repo describe *what changed and why it was found*
   (e.g. "Fix DGTR cases failing the Indian-implication gate (found during
   live validation)") — follow that convention rather than generic messages.

@@ -16,7 +16,8 @@ from radar.content import drafts, generation
 from radar.db.connection import get_connection, init_db, seed_sources
 from radar.desk import approvals, calls_ledger, performance
 from radar.desk.desk_sheet import write_desk_sheet
-from radar.pipeline import angles, evidence, verify
+from radar.collectors import registry
+from radar.pipeline import angles, evidence, source_roles, verify
 from radar.pipeline.exposure import IndianExposure
 from radar.pipeline.orchestrator import rescore_signal
 from radar.publishing import credentials as publish_credentials
@@ -194,6 +195,16 @@ def cmd_claim_add(a):
                            source_quote=_read_text_arg(a.quote) if a.quote else None, verified_by=a.by)
     print(f"Claim #{cid} added")
     _rescore_and_report(conn, a.signal_id)
+
+
+def cmd_lead_add(a):
+    raw_id = registry.add_manual_lead(_conn(), a.source_id, a.title, a.url, body_text=a.body or "",
+                                      published_at=a.published, publisher=a.publisher)
+    print(f"Lead added as raw item #{raw_id} (enters the next pipeline run)" if raw_id else "Duplicate — already collected")
+
+
+def cmd_provenance(a):
+    print(source_roles.format_provenance(source_roles.signal_provenance(_conn(), a.signal_id)))
 
 
 def cmd_angle_brief(a):
@@ -445,6 +456,17 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--source-date")
     sp.add_argument("--quote")
     sp.add_argument("--by", default="analyst")
+
+    sp = add("lead-add", cmd_lead_add, "manual intake: a social post, field note or article no feed caught")
+    sp.add_argument("source_id", help="a method: manual source, e.g. expert_social_posts, field_notes, manual_news_lead")
+    sp.add_argument("--title", required=True)
+    sp.add_argument("--url", required=True, help="post/article URL, or an internal reference for an anonymised field note")
+    sp.add_argument("--body")
+    sp.add_argument("--published", help="ISO date the post/article was published")
+    sp.add_argument("--publisher", help="outlet or account, e.g. reuters.com")
+
+    sp = add("provenance", cmd_provenance, "show a signal's sources grouped by role (primary / corroboration / leads / context / saturation)")
+    sp.add_argument("signal_id")
 
     sp = add("angle-brief", cmd_angle_brief, "print the Angle Engine brief")
     sp.add_argument("signal_id")

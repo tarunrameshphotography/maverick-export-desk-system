@@ -48,6 +48,14 @@ def sources() -> list[dict]:
     return _load_yaml("sources.yaml")["sources"]
 
 
+def source_tiers() -> dict:
+    return _load_yaml("sources.yaml")["source_tiers"]
+
+
+def provenance_config() -> dict:
+    return _load_yaml("sources.yaml").get("provenance", {})
+
+
 def collection_config() -> dict:
     return _load_yaml("sources.yaml").get("collection", {"lookback_days": 21})
 
