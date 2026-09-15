@@ -40,7 +40,7 @@ human today.
 | I | Content Engine — full asset bundle, genuinely finished prose | **Done** — scaffold (`drafts.py`) + grounded LLM generation (`generation.py`), founder-approved | `radar/content/drafts.py`, `radar/content/generation.py` |
 | J | Quality control (lint, disclosure, risk tier, checklist) | **Done** | `radar/content/drafts.py::lint_draft`, `set_draft_status` |
 | K | Publishing queue (status/approval workflow) | **Done (Phase 3, 2026-09-15)** — queue schema, lifecycle state machine, scheduling, dispatch seam and CLI, now with `tests/test_publishing_queue.py` (36 tests) and a live CLI walkthrough on a scratch DB. See milestones.md "Phase 3 — DONE" | `radar/publishing/`, migration `006`, `tests/test_publishing_queue.py` |
-| L | Social publishing integrations (LinkedIn/Instagram APIs) | **Not built** — by design, gated behind `auto_publish` feature flag which cannot currently be enabled | none yet |
+| L | Social publishing integrations (LinkedIn/Instagram APIs) | **Code built and tested (2026-09-15); `auto_publish` gate still closed by design** — see Phase 4 below | `radar/publishing/linkedin.py`, `radar/publishing/instagram.py` |
 | M | Daily orchestrator / scheduler | **Partially done** — collection is scheduled (`radar schedule`); content generation and publishing are not | `radar/runner.py`, `config/schedule.yaml` |
 | N | Performance capture & learning loop | **Done** for the metrics/Calls-Ledger side; no live API-based metrics ingestion yet (CSV import only) | `radar/desk/performance.py`, `calls_ledger.py` |
 
@@ -141,14 +141,28 @@ cancellation/supersession side paths), not a rebuild of the approval state
 machine in `desk/approvals.py`, which it reuses as-is for the underlying
 draft approval gate. See milestones.md for the full built/tested breakdown.
 
-### Phase 4 — Social publishing integrations
-LinkedIn (Community Management API / Marketing API, depending on what the
-authenticated account supports) and Instagram (Graph API via a connected
-Facebook Page, professional account required). Both gated behind the
-`auto_publish` feature flag, which `settings.feature_flags()` **hard-refuses**
-to let be `true` today (`tests/test_drafts.py::test_auto_publish_flag_cannot_be_enabled`).
-Flipping that gate later is a one-line config change plus removing that
-refusal — the architecture does not need to change shape to allow it.
+### Phase 4 — Social publishing integrations (code built and tested, 2026-09-15; gate still closed)
+`radar/publishing/linkedin.py` and `radar/publishing/instagram.py` now
+satisfy Phase 3's `Publisher` protocol: LinkedIn (Posts/Images/Videos/
+Documents/MultiImage APIs, contract verified against
+learn.microsoft.com/en-us/linkedin/marketing/community-management/ on
+2026-09-15, moniker li-lms-2026-08) and Instagram (Graph API content
+publishing, verified against developers.facebook.com/docs/instagram-platform/
+content-publishing/ on 2026-09-15, v25.0). Both read credentials from
+environment variables only (`radar/publishing/credentials.py`), classify
+every HTTP outcome through a shared `platform_http.py` (401/403 always
+`permanent_error`, never silently retried), and are fully covered by unit
+tests injecting a fake HTTP session — zero real network calls anywhere in
+this codebase or its test suite. `auto_publish` remains hard-refused by
+`settings.feature_flags()`, unchanged (`tests/test_drafts.py::test_auto_publish_flag_cannot_be_enabled`);
+`queue-dispatch --live` still refuses before either publisher is ever
+called. See `docs/superpowers/specs/2026-09-15-phase4-social-publishing-design.md`
+and `milestones.md` for the full built/tested breakdown, and re-verify both
+platforms' API versions against their live docs before ever flipping the
+gate — this was checked once, not continuously. Flipping the gate later is
+a one-line config change plus removing the hard refusal — the architecture
+does not need to change shape to allow it, and is a separate, explicit
+founder decision (see CLAUDE.md's guardrails).
 
 ### Phase 5 — Daily orchestrator
 Extend `radar/runner.py` / `config/schedule.yaml` (which already knows how to

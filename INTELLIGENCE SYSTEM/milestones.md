@@ -255,11 +255,77 @@ document or multi-image post because the Posts API supports organic
 carousels only as sponsored content; Instagram Reels/carousels publish the
 separately approved `instagram_caption` draft as their caption.
 
+## Phase 4 — Social publishing integrations: code built and tested (2026-09-15)
+
+Built per `docs/superpowers/specs/2026-09-15-phase4-social-publishing-design.md`,
+with LinkedIn/Instagram API contracts verified against each platform's live
+developer documentation (not model memory) during implementation, not just
+during design — see that spec's "Verified API facts" section and this
+entry for the exact endpoints, request/response shapes, and doc URLs
+checked on 2026-09-15.
+
+**Built and wired:**
+- `radar/publishing/platform_http.py`: pure-function HTTP-outcome
+  classification shared by both platforms — 401/403 always `permanent_error`
+  (never retried), 429 `retryable_error` (with `Retry-After` if present),
+  5xx `retryable_error`, other 4xx `permanent_error`, a transport exception
+  always `unknown`.
+- `radar/publishing/credentials.py`: env-var-only credential loading
+  (`LINKEDIN_ACCESS_TOKEN`/`LINKEDIN_PERSON_URN`/`LINKEDIN_ORG_URN`,
+  `INSTAGRAM_ACCESS_TOKEN`/`INSTAGRAM_BUSINESS_ACCOUNT_ID`) — the only seam
+  either publisher touches `os.environ` through, shaped so a future
+  token-refresh mechanism can replace these two functions' bodies without
+  changing either publisher's constructor.
+- `radar/publishing/linkedin.py`: `LinkedInPublisher` — text, image
+  (Images API upload), organic MultiImage (2-20 images, explicitly distinct
+  from LinkedIn's sponsored-only Carousel — confirmed live in the Posts API
+  docs: "Organic carousel is currently not supported"), document (Documents
+  API, required title), and video (Videos/Assets API's always-chunked
+  upload, ETag part IDs, `finalizeUpload`) post formats. Confirmed live:
+  the created post's ID comes back in the `x-restli-id` response header,
+  not the body; image upload's PUT requires an `Authorization` header while
+  video upload's PUT does not. `Linkedin-Version` header value pinned via
+  `radar/config/publishing.yaml`'s new `platform_apis.linkedin.api_version`
+  (`"202608"`), not hard-coded.
+- `radar/publishing/instagram.py`: `InstagramPublisher` — image, carousel
+  (up to 10 items), and Reel (container + bounded status polling, never
+  auto-retried past the poll bound — returns `unknown` instead of guessing,
+  matching Meta's own documented recommendation: "query a container's
+  status once per minute, for no more than 5 minutes") post formats via the
+  Graph API two-step container/publish flow. API version, poll attempt
+  count, and poll interval all read from `publishing.yaml`'s new
+  `platform_apis.instagram` keys. Error classification inspects the Graph
+  API's JSON error body (`error.type`/`error.code`) before falling back to
+  `platform_http`, since Graph API frequently returns HTTP 400 for both
+  malformed requests and expired tokens alike.
+- `radar/cli.py::cmd_queue_dispatch` now builds a `publishers` dict from
+  whichever of the two credential functions return non-`None` — a platform
+  with no env vars configured is simply absent, reusing `dispatch_due`'s
+  existing "skipped: no publisher for X" behavior from Phase 3.
+
+**Tests added:** 46 new tests across `tests/test_platform_http.py` (11),
+`tests/test_credentials.py` (6), `tests/test_linkedin_publisher.py` (15),
+`tests/test_instagram_publisher.py` (11), `tests/test_dispatch_real_publishers.py` (2),
+plus 1 in `tests/test_cli.py`. Every publisher test injects a fake HTTP
+session (`tests/_fake_http.py`) — zero real network calls in the suite.
+Full suite: **316 passing** (was 270).
+
+**Verified live, not just under pytest:** `radar init` → `radar queue-dispatch`
+on an empty scratch DB with no platform env vars set (both publishers
+absent, no error) and again with a fake `LINKEDIN_ACCESS_TOKEN`/
+`LINKEDIN_PERSON_URN` set (publisher constructs cleanly; still "Nothing is
+due" since nothing was queued and `--live` was not passed). No real
+LinkedIn/Instagram API call was made anywhere in this phase, per the
+founder's explicit instruction.
+
+**What was deliberately not done:** `auto_publish` remains hard-refused by
+`settings.feature_flags()`, completely untouched; no OAuth token
+acquisition/refresh was implemented (`credentials.py` is the seam, not a
+refresh mechanism); no real HTTP call to either platform was made in this
+session. Flipping the gate, or adding refresh, are each their own future
+decision — see roadmap.md's Phase 4 section.
+
 ## Not started (see roadmap.md for detail)
-- Phase 3: publishing queue schema (`scheduled_at`, media requirement,
-  platform post ID, error state).
-- Phase 4: LinkedIn/Instagram API publishing integrations. `auto_publish`
-  remains hard-refused by `settings.feature_flags()`.
 - Phase 5: orchestrator scheduling for content generation/queue placement
   (only collection is scheduled today).
 - Phase 6 (partial): live metrics ingestion from platform APIs — CSV import
