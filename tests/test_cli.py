@@ -74,3 +74,25 @@ def test_status_rejection_requires_reason_code(env, capsys):
     sid = _db(env).execute("SELECT id FROM signals WHERE status = 'NEEDS_RESEARCH' LIMIT 1").fetchone()["id"]
     assert cli.main(["status", sid, "REJECTED", "--by", "founder"]) == 2
     assert cli.main(["status", sid, "REJECTED", "--by", "founder", "--reason", "Too generic"]) == 0
+
+
+def test_queue_dispatch_live_still_refused_regardless_of_credentials(env, capsys, monkeypatch):
+    # No credentials configured: dry run must not error, and --live must
+    # still be refused by the auto_publish gate (exit 2), unaffected by
+    # Phase 4's publisher wiring.
+    monkeypatch.delenv("LINKEDIN_ACCESS_TOKEN", raising=False)
+    monkeypatch.delenv("INSTAGRAM_ACCESS_TOKEN", raising=False)
+    assert cli.main(["queue-dispatch"]) == 0
+    assert "Nothing is due" in capsys.readouterr().out
+    assert cli.main(["queue-dispatch", "--live"]) == 2
+    assert "auto_publish" in capsys.readouterr().err
+
+    # Fake credentials configured: _publishers() must build a real
+    # LinkedInPublisher without error, and --live must STILL be refused --
+    # having credentials never bypasses the auto_publish gate.
+    monkeypatch.setenv("LINKEDIN_ACCESS_TOKEN", "fake-token")
+    monkeypatch.setenv("LINKEDIN_PERSON_URN", "urn:li:person:1")
+    assert cli.main(["queue-dispatch"]) == 0
+    assert "Nothing is due" in capsys.readouterr().out
+    assert cli.main(["queue-dispatch", "--live"]) == 2
+    assert "auto_publish" in capsys.readouterr().err

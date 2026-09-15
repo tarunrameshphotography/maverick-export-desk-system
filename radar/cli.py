@@ -19,8 +19,11 @@ from radar.desk.desk_sheet import write_desk_sheet
 from radar.pipeline import angles, evidence, verify
 from radar.pipeline.exposure import IndianExposure
 from radar.pipeline.orchestrator import rescore_signal
+from radar.publishing import credentials as publish_credentials
 from radar.publishing import dispatch as publish_dispatch
 from radar.publishing import queue as publish_queue
+from radar.publishing.instagram import InstagramPublisher
+from radar.publishing.linkedin import LinkedInPublisher
 from radar.runlog import now_iso
 
 
@@ -28,6 +31,22 @@ def _conn():
     conn = get_connection()
     init_db(conn)
     return conn
+
+
+def _publishers() -> dict:
+    """Real platform Publisher instances, built only for platforms with
+    credentials configured in the environment. A platform with no env vars
+    set is simply absent -- dispatch_due already reports 'skipped: no
+    publisher for X' for that case. auto_publish still gates whether --live
+    ever reaches these at all (see dispatch.assert_live_publishing_allowed)."""
+    publishers = {}
+    li_cred = publish_credentials.linkedin_credential()
+    if li_cred:
+        publishers["linkedin"] = LinkedInPublisher(li_cred)
+    ig_cred = publish_credentials.instagram_credential()
+    if ig_cred:
+        publishers["instagram"] = InstagramPublisher(ig_cred)
+    return publishers
 
 
 def _read_text_arg(value: str) -> str:
@@ -307,7 +326,7 @@ def cmd_queue_reconcile(a):
 
 
 def cmd_queue_dispatch(a):
-    reports = publish_dispatch.dispatch_due(_conn(), now_iso(), dry_run=not a.live)
+    reports = publish_dispatch.dispatch_due(_conn(), now_iso(), dry_run=not a.live, publishers=_publishers())
     print(publish_dispatch.render_dispatch_report(reports, dry_run=not a.live))
 
 
