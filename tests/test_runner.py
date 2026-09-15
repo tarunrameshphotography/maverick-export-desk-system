@@ -5,6 +5,10 @@ import pytest
 
 from radar import runner, settings
 from radar.collectors import registry
+from radar.content.drafts import ASSET_SLOTS, create_content_bundle
+from radar.content.generation import VISUAL_SPLIT
+from radar.pipeline.angles import save_angle, select_angle
+from radar.pipeline.verify import add_claim
 
 
 @pytest.fixture(autouse=True)
@@ -83,3 +87,93 @@ def test_unexpected_crash_is_recorded_not_raised(conn, monkeypatch):
 def test_unknown_mode_rejected(conn):
     with pytest.raises(ValueError):
         runner.run(conn, "lunchtime")
+
+
+NOW_CONTENT = "2026-09-15T19:00:00"
+CONTENT_DISCLOSURE_FREE_CATEGORY = "logistics"
+
+
+def _seed_ready_signal(conn, signal_id="SIG-READY-1", with_claim=True, select=True):
+    conn.execute(
+        """
+        INSERT INTO signals (id, title, first_seen_at, topic_category, status, primary_source_url,
+                              created_at, updated_at)
+        VALUES (?, 'Container detention notice', ?, ?, 'SCORED', 'https://dgft.gov.in/n99', ?, ?)
+        """,
+        (signal_id, NOW_CONTENT, CONTENT_DISCLOSURE_FREE_CATEGORY, NOW_CONTENT, NOW_CONTENT),
+    )
+    conn.commit()
+    if with_claim:
+        add_claim(
+            conn, signal_id, "Detention-free period extended to 10 days", "fact",
+            "https://dgft.gov.in/n99", "primary", NOW_CONTENT,
+            source_quote="the detention-free period is extended to 10 days", verified_by="analyst",
+        )
+    aid = save_angle(
+        conn, signal_id, "Countdown", "timing_transition_risk",
+        "Ten days sounds generous until you count loading delays",
+        "The extension helps only if the container actually moves within the window.",
+        "claude_code", NOW_CONTENT,
+    )
+    if select:
+        select_angle(conn, aid)
+    return signal_id
+
+
+def _fake_generate(system_prompt: str, user_prompt: str) -> str:
+    body = (
+        "The detention-free period is extended to 10 days, per the DGFT notice. "
+        "This helps only if loading finishes inside that window. " * 8
+    ).strip()
+    return f"{body}\n\n{VISUAL_SPLIT}\nA simple countdown graphic showing the 10-day window."
+
+
+def test_content_run_generates_bundles_for_ready_signals(conn):
+    sid = _seed_ready_signal(conn)
+    row = runner.run(conn, "content", generate_fn=_fake_generate)
+    assert row["status"] == "completed"
+    notes = json.loads(row["notes"])
+    assert notes["candidates"] == 1
+    assert notes["bundles_generated"] == 1
+    assert notes["skipped"] == []
+    assert row["model_calls"] == len(ASSET_SLOTS)
+    drafts_for_signal = conn.execute(
+        "SELECT COUNT(*) AS n FROM content_drafts WHERE signal_id = ?", (sid,)
+    ).fetchone()["n"]
+    assert drafts_for_signal == len(ASSET_SLOTS)
+
+
+def test_content_run_skips_signal_without_selected_angle(conn):
+    _seed_ready_signal(conn, select=False)
+    row = runner.run(conn, "content", generate_fn=_fake_generate)
+    assert row["status"] == "completed"
+    notes = json.loads(row["notes"])
+    # not selected -> status never moved to READY_FOR_REVIEW -> not even a candidate
+    assert notes["candidates"] == 0
+    assert notes["bundles_generated"] == 0
+
+
+def test_content_run_skips_signal_without_verified_claims_and_records_why(conn):
+    sid = _seed_ready_signal(conn, with_claim=False)
+    row = runner.run(conn, "content", generate_fn=_fake_generate)
+    assert row["status"] == "completed"
+    notes = json.loads(row["notes"])
+    assert notes["candidates"] == 1
+    assert notes["bundles_generated"] == 0
+    assert len(notes["skipped"]) == 1
+    assert notes["skipped"][0]["signal_id"] == sid
+    assert "no verified claims" in notes["skipped"][0]["reason"]
+
+
+def test_content_run_does_not_regenerate_an_existing_bundle(conn):
+    sid = _seed_ready_signal(conn)
+    first = runner.run(conn, "content", generate_fn=_fake_generate)
+    assert json.loads(first["notes"])["bundles_generated"] == 1
+    second = runner.run(conn, "content", generate_fn=_fake_generate)
+    notes = json.loads(second["notes"])
+    assert notes["candidates"] == 0
+    assert notes["bundles_generated"] == 0
+    drafts_for_signal = conn.execute(
+        "SELECT COUNT(*) AS n FROM content_drafts WHERE signal_id = ?", (sid,)
+    ).fetchone()["n"]
+    assert drafts_for_signal == len(ASSET_SLOTS)  # still just the one bundle
