@@ -10,6 +10,11 @@ runs:
   - name: MaverickRadar_Afternoon
     mode: evening        # second sweep: afternoon DGFT/CBIC uploads, EU morning publications
     time: "16:00"
+  - name: MaverickRadar_ContentGen
+    mode: content        # Phase 5: generate + lint content bundles for signals a human
+                          # has already moved to READY_FOR_REVIEW via angle-select earlier
+                          # in the day. Never approves or queues anything.
+    time: "19:00"
   - name: MaverickRadar_Evening
     mode: evening        # late DGFT/CBIC check; refreshes the Watchlist for tomorrow
     time: "21:00"
