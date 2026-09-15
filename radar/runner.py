@@ -71,14 +71,6 @@ def _generate_content_for_ready_signals(
             results = content_generation.create_and_generate_bundle(
                 conn, signal_id, now_iso_str, generate_fn=generate_fn
             )
-            # After generation, delete the initial scaffold drafts (status='draft'),
-            # keeping only the generated versions (status='edited'). This leaves one
-            # final content bundle per signal, ready for human review.
-            conn.execute(
-                "DELETE FROM content_drafts WHERE signal_id = ? AND status = 'draft'",
-                (signal_id,),
-            )
-            conn.commit()
             model_calls += len(results)
             bundles_generated += 1
         except ValueError as exc:

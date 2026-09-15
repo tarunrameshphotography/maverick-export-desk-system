@@ -140,7 +140,9 @@ def test_content_run_generates_bundles_for_ready_signals(conn):
     drafts_for_signal = conn.execute(
         "SELECT COUNT(*) AS n FROM content_drafts WHERE signal_id = ?", (sid,)
     ).fetchone()["n"]
-    assert drafts_for_signal == len(ASSET_SLOTS)
+    # 8 scaffold rows (v1, status='draft') + 8 generated rows (v2, status='edited')
+    # per save_draft_version's invariant: old versions are never deleted, they are the audit trail
+    assert drafts_for_signal == len(ASSET_SLOTS) * 2
 
 
 def test_content_run_skips_signal_without_selected_angle(conn):
@@ -176,4 +178,6 @@ def test_content_run_does_not_regenerate_an_existing_bundle(conn):
     drafts_for_signal = conn.execute(
         "SELECT COUNT(*) AS n FROM content_drafts WHERE signal_id = ?", (sid,)
     ).fetchone()["n"]
-    assert drafts_for_signal == len(ASSET_SLOTS)  # still just the one bundle
+    # still 16 rows (8 scaffold v1 + 8 generated v2), no new rows from second run
+    # because the idempotency guard (NOT IN content_drafts) prevents re-generation
+    assert drafts_for_signal == len(ASSET_SLOTS) * 2
