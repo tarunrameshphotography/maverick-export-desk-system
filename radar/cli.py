@@ -75,6 +75,12 @@ def cmd_run(a):
         print(f"    - {e.strip().splitlines()[-1][:160]}")
     if row["desk_sheet_id"]:
         print(f"  Desk Sheet: {row['desk_sheet_id']}")
+    notes = json.loads(row["notes"] or "{}")
+    if "candidates" in notes:
+        print(f"  candidates: {notes['candidates']}")
+        print(f"  bundles_generated: {notes['bundles_generated']}")
+        for skip in notes.get("skipped", []):
+            print(f"    skipped {skip['signal_id']}: {skip['reason']}")
     return 0 if row["status"] == "completed" else 1
 
 

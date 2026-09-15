@@ -1,5 +1,11 @@
 -- Phase 5: Add 'content_generation' run type for daily content orchestrator.
 -- In SQLite, we cannot directly alter CHECK constraints, so we recreate the table.
+-- source_failures.run_id REFERENCES system_runs(id), and connection.py turns
+-- foreign_keys ON for every connection; DROP TABLE performs an implicit
+-- delete of all system_runs rows, which fails the FK check on any DB that
+-- already has source_failures rows referencing it. Disable FK enforcement
+-- for the duration of the rebuild, exactly as 004_cbic_api_method.sql does.
+PRAGMA foreign_keys = OFF;
 
 CREATE TABLE system_runs_new (
     id                  INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,3 +28,5 @@ CREATE TABLE system_runs_new (
 INSERT INTO system_runs_new SELECT * FROM system_runs;
 DROP TABLE system_runs;
 ALTER TABLE system_runs_new RENAME TO system_runs;
+
+PRAGMA foreign_keys = ON;

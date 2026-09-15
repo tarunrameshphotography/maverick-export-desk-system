@@ -201,6 +201,24 @@ live-metrics half depends on Phase 4.
   `tests/test_runner.py` (candidate generation, skipping signals without a
   selected angle or without verified claims, and idempotency — a signal
   that already has a bundle is not regenerated on a later run) and walked
-  end-to-end on a scratch DB.
+  end-to-end on a scratch DB. Live Anthropic generation was not exercised in
+  this environment (no `ANTHROPIC_API_KEY`/`anthropic` package installed):
+  the automated tests cover the generation path via an injected fake
+  `generate_fn`, and the CLI wiring/candidate-selection/guardrails were
+  verified live on a scratch DB, but not a real model call.
+  A final integration-review fix pass (2026-09-15) closed two defects found
+  by whole-branch review: migration 007's `DROP TABLE system_runs` could
+  raise `sqlite3.IntegrityError` on any real DB with `source_failures` rows
+  referencing it (fixed by disabling foreign keys for the rebuild, as
+  migration 004 already does); and a signal skipped for having zero
+  verified claims was being permanently excluded from every future content
+  run, because the scaffold rows were already committed before the
+  no-verified-claims check ran (fixed by checking verified-claim count
+  before scaffolding). That same pass noted a residual, harder limitation
+  it did not attempt to fix: a crash partway through a single signal's
+  generation (after some but not all of its asset slots are written) leaves
+  that signal's partial `content_drafts` rows in place, and it is not
+  retried automatically on a later run — recovering from a partial bundle
+  would need a larger transactional-retry design.
 - **Phase 6 done:** a published post's real engagement numbers flow back into
   `performance.py` without a manual CSV step.

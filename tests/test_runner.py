@@ -143,6 +143,12 @@ def test_content_run_generates_bundles_for_ready_signals(conn):
     # 8 scaffold rows (v1, status='draft') + 8 generated rows (v2, status='edited')
     # per save_draft_version's invariant: old versions are never deleted, they are the audit trail
     assert drafts_for_signal == len(ASSET_SLOTS) * 2
+    # Core safety guarantee: nothing this orchestrator does ever auto-approves
+    # or auto-queues content -- every generated asset still needs a human.
+    assert conn.execute(
+        "SELECT COUNT(*) AS n FROM content_drafts WHERE status = 'approved'"
+    ).fetchone()["n"] == 0
+    assert conn.execute("SELECT COUNT(*) AS n FROM publish_queue").fetchone()["n"] == 0
 
 
 def test_content_run_skips_signal_without_selected_angle(conn):
@@ -181,3 +187,51 @@ def test_content_run_does_not_regenerate_an_existing_bundle(conn):
     # still 16 rows (8 scaffold v1 + 8 generated v2), no new rows from second run
     # because the idempotency guard (NOT IN content_drafts) prevents re-generation
     assert drafts_for_signal == len(ASSET_SLOTS) * 2
+
+
+def test_content_run_retries_a_signal_once_claims_are_verified(conn):
+    sid = _seed_ready_signal(conn, with_claim=False)
+
+    first = runner.run(conn, "content", generate_fn=_fake_generate)
+    first_notes = json.loads(first["notes"])
+    assert first_notes["candidates"] == 1
+    assert first_notes["bundles_generated"] == 0
+    assert len(first_notes["skipped"]) == 1
+    # No scaffold rows were ever created for this signal, so it remains a
+    # valid candidate on a later run (the fix for the "permanently skipped"
+    # bug: the old code called create_content_bundle, which commits its 8
+    # scaffold rows, before discovering there were no verified claims).
+    assert conn.execute(
+        "SELECT COUNT(*) AS n FROM content_drafts WHERE signal_id = ?", (sid,)
+    ).fetchone()["n"] == 0
+
+    add_claim(
+        conn, sid, "Detention-free period extended to 10 days", "fact",
+        "https://dgft.gov.in/n99", "primary", NOW_CONTENT,
+        source_quote="the detention-free period is extended to 10 days", verified_by="analyst",
+    )
+
+    second = runner.run(conn, "content", generate_fn=_fake_generate)
+    second_notes = json.loads(second["notes"])
+    assert second_notes["candidates"] == 1
+    assert second_notes["bundles_generated"] == 1
+
+
+def test_content_run_records_partial_progress_when_a_later_signal_crashes(conn):
+    sid_1 = _seed_ready_signal(conn, signal_id="SIG-READY-1")
+    sid_2 = _seed_ready_signal(conn, signal_id="SIG-READY-2")
+
+    calls = {"n": 0}
+
+    def flaky_generate(system_prompt: str, user_prompt: str) -> str:
+        calls["n"] += 1
+        if calls["n"] > len(ASSET_SLOTS):
+            raise RuntimeError("simulated API failure")
+        return _fake_generate(system_prompt, user_prompt)
+
+    row = runner.run(conn, "content", generate_fn=flaky_generate)
+    assert row["status"] == "failed"
+    assert "simulated API failure" in row["errors_json"]
+    notes = json.loads(row["notes"])
+    assert notes["bundles_generated"] == 1
+    assert notes["candidates"] == 2

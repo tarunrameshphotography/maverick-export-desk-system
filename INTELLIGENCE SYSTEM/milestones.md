@@ -325,11 +325,20 @@ refresh mechanism); no real HTTP call to either platform was made in this
 session. Flipping the gate, or adding refresh, are each their own future
 decision — see roadmap.md's Phase 4 section.
 
+## Phase 5 — Daily content orchestrator: DONE (2026-09-15)
+
+`radar run content` and `radar schedule --install` (via a new
+`MaverickRadar_ContentGen` entry in `config/schedule.yaml`) automatically
+generate and lint a full content bundle for every signal a human has
+already moved to `READY_FOR_REVIEW` by selecting an angle (`angle-select`).
+Orchestrator scheduling for content generation only — not queue placement:
+queueing an approved draft still requires a human, since
+`publish_queue.enqueue` requires `status='approved'` and nothing in this
+codebase auto-approves a draft. See roadmap.md's "Phase 5 done" entry for
+the full detail, including the final integration-review fix pass
+(2026-09-15) that closed a migration FK bug and a permanent-skip retry
+defect found during that review.
+
 ## Not started (see roadmap.md for detail)
-- Phase 5: DONE (2026-09-15) — orchestrator scheduling for content
-  generation only (not queue placement: queueing an approved draft still
-  requires a human, since `publish_queue.enqueue` requires
-  `status='approved'` and nothing in this codebase auto-approves a draft).
-  See roadmap.md's "Phase 5 done" entry.
 - Phase 6 (partial): live metrics ingestion from platform APIs — CSV import
   and the weight-learning loop already exist and work.
