@@ -39,7 +39,7 @@ human today.
 | H | Maverick Angle (human/Claude Code picks) | **Done**, hybrid | `radar/pipeline/angles.py` |
 | I | Content Engine — full asset bundle, genuinely finished prose | **Done** — scaffold (`drafts.py`) + grounded LLM generation (`generation.py`), founder-approved | `radar/content/drafts.py`, `radar/content/generation.py` |
 | J | Quality control (lint, disclosure, risk tier, checklist) | **Done** | `radar/content/drafts.py::lint_draft`, `set_draft_status` |
-| K | Publishing queue (status/approval workflow) | **In progress (Phase 3, checkpointed 2026-09-14)** — queue schema, lifecycle, scheduling, dispatch seam and CLI are built; tests and docs still to do. See milestones.md "Phase 3 — IN PROGRESS" | `radar/publishing/`, migration `006` |
+| K | Publishing queue (status/approval workflow) | **Done (Phase 3, 2026-09-15)** — queue schema, lifecycle state machine, scheduling, dispatch seam and CLI, now with `tests/test_publishing_queue.py` (36 tests) and a live CLI walkthrough on a scratch DB. See milestones.md "Phase 3 — DONE" | `radar/publishing/`, migration `006`, `tests/test_publishing_queue.py` |
 | L | Social publishing integrations (LinkedIn/Instagram APIs) | **Not built** — by design, gated behind `auto_publish` feature flag which cannot currently be enabled | none yet |
 | M | Daily orchestrator / scheduler | **Partially done** — collection is scheduled (`radar schedule`); content generation and publishing are not | `radar/runner.py`, `config/schedule.yaml` |
 | N | Performance capture & learning loop | **Done** for the metrics/Calls-Ledger side; no live API-based metrics ingestion yet (CSV import only) | `radar/desk/performance.py`, `calls_ledger.py` |
@@ -132,12 +132,14 @@ not a scaffold a human still has to write.
   are completely untouched — a generated asset needs the same human sign-off
   as a hand-written one, and nothing here can publish.
 
-### Phase 3 — Publishing queue (next)
-Extend `content_drafts`/a new queue table with: `scheduled_at`, explicit
-`media_requirement`, `published_platform_id`, `error_state`. The approval
-state machine in `desk/approvals.py` already has the right shape (reason
-codes, reviewer, risk-tier gating) — this phase is schema + a queue-listing
-view, not a rebuild.
+### Phase 3 — Publishing queue (done, 2026-09-15)
+Built as a new `publish_queue`/`queue_media`/`publish_attempts`/`queue_events`
+schema (migration `006`) plus `radar/publishing/{queue,validation,dispatch}.py`
+and CLI `queue-*` commands — a state machine (awaiting_media -> queued ->
+scheduled -> publishing -> published, with retry/hold/reconciliation/
+cancellation/supersession side paths), not a rebuild of the approval state
+machine in `desk/approvals.py`, which it reuses as-is for the underlying
+draft approval gate. See milestones.md for the full built/tested breakdown.
 
 ### Phase 4 — Social publishing integrations
 LinkedIn (Community Management API / Marketing API, depending on what the
@@ -162,17 +164,14 @@ a manual weekly CSV export.
 
 ## Dependencies
 
-Phase 3 depends on nothing new (schema-only). Phase 4 depends on Phase 3
-(a queue to publish *from*) and on real developer accounts/API access
-(see milestones.md's "credentials needed" list). Phase 5 depends on Phase 2
-(content to schedule) and benefits from Phase 3 existing first. Phase 6's
+Phase 3 is done. Phase 4 depends on Phase 3 (a queue to publish *from*,
+now built) and on real developer accounts/API access (see milestones.md's
+"credentials needed" list). Phase 5 depends on Phase 2 (content to schedule)
+and benefits from Phase 3 existing first (it now does). Phase 6's
 live-metrics half depends on Phase 4.
 
 ## What "done" means for each remaining milestone
 
-- **Phase 3 done:** a signal's approved content bundle can be listed as a
-  queue with scheduled time, required media, and status, independent of the
-  Desk Sheet.
 - **Phase 4 done:** an approved, queued item can be posted to LinkedIn and/or
   Instagram via API by a code path that is inert unless `auto_publish=true`
   and a human has approved that specific item; failures are recorded, not

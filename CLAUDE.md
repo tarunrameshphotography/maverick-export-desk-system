@@ -45,24 +45,41 @@ radar/content/       drafts.py — content scaffolding + the pre-publish checkli
                      generation.py — Phase 2 prose generation (grounded LLM
                      call filling the scaffold; founder-approved exception,
                      see below)
+radar/publishing/    queue.py (lifecycle state machine), validation.py (text/
+                     media/approval gates), dispatch.py (scheduler tick +
+                     Publisher seam for Phase 4). Phase 3, done — see below.
 radar/db/            schema.sql (baseline) + migrations/NNN_*.sql (always applied, in order)
 radar/cli.py         every day-to-day command (see RADAR_README.md)
 ```
 
-Run `python -m pytest tests/ -q` before and after any change — **234 tests**,
+Run `python -m pytest tests/ -q` before and after any change — **270 tests**,
 all passing as of this writing. If a change drops that number without an
 explicit, understood reason, stop and fix it before continuing.
 
-## Work in progress — read first
+## Phase 3 — Publishing queue: DONE (2026-09-15)
 
-**Phase 3 (publishing queue) is half-built and checkpointed as of
-2026-09-14.** Code lives in `radar/publishing/` (+ migration `006`,
-`config/publishing.yaml`, CLI `queue-*` commands, hooks in `drafts.py`).
-It is committed but **untested** beyond the existing suite still passing.
-The exact remaining steps and the planned test list are in
-`INTELLIGENCE SYSTEM/milestones.md` under "Phase 3 — Publishing queue: IN
-PROGRESS". Finish those before starting anything else; remove this section
-when Phase 3 is complete.
+The queue/lifecycle layer described in roadmap.md's Phase 3 is finished and
+tested: `radar/publishing/` (+ migration `006`, `config/publishing.yaml`,
+CLI `queue-*` commands, hooks in `drafts.py`) now has `tests/test_publishing_queue.py`
+(36 tests) proving the state machine — approval/idempotency/repeat gating,
+media validation, scheduling (cadence, founder-only tiers, past-time
+refusal), supersession on edit/rejection, and every dispatch outcome
+(published / no-post-id "unknown" / permanent error / retryable backoff to
+failure / publisher exception / stale lease) with the `auto_publish` gate
+left genuinely closed throughout (only `dispatch.assert_live_publishing_allowed`
+is monkeypatched in tests that need to reach the publisher seam; the flag
+itself is never touched). Also walked end-to-end on a scratch DB via the CLI
+(`init` → sample run → `claim-mark` → `angle-add/select` → `content-bundle`
+→ `draft-edit`/`draft-lint` → `draft-status approved` → `queue-add` →
+`queue-schedule` → `queue-dispatch` dry run while due, confirmed no state
+change → `queue-dispatch --live` refused → `queue-mark-published` →
+terminal). No code changes were needed in `radar/publishing/` itself — the
+2026-09-14 checkpoint's design and implementation held up under the full
+planned test list in `INTELLIGENCE SYSTEM/milestones.md`. See that file for
+what was and wasn't covered (the exhaustive bullet list there is aspirational;
+the delivered suite covers every state-machine transition and guardrail, not
+literally every enumerated scenario) and roadmap.md for what Phase 4 now
+plugs into.
 
 ## The hybrid model — and the one founder-approved exception to it
 
