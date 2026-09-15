@@ -326,7 +326,10 @@ session. Flipping the gate, or adding refresh, are each their own future
 decision — see roadmap.md's Phase 4 section.
 
 ## Not started (see roadmap.md for detail)
-- Phase 5: orchestrator scheduling for content generation/queue placement
-  (only collection is scheduled today).
+- Phase 5: DONE (2026-09-15) — orchestrator scheduling for content
+  generation only (not queue placement: queueing an approved draft still
+  requires a human, since `publish_queue.enqueue` requires
+  `status='approved'` and nothing in this codebase auto-approves a draft).
+  See roadmap.md's "Phase 5 done" entry.
 - Phase 6 (partial): live metrics ingestion from platform APIs — CSV import
   and the weight-learning loop already exist and work.

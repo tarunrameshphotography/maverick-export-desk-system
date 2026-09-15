@@ -190,8 +190,17 @@ live-metrics half depends on Phase 4.
   Instagram via API by a code path that is inert unless `auto_publish=true`
   and a human has approved that specific item; failures are recorded, not
   swallowed.
-- **Phase 5 done:** `radar schedule --install` registers tasks that also
-  generate and queue content, with the same dry-run-by-default safety as
-  today's collection scheduling.
+- **Phase 5 done (2026-09-15):** `radar run content` and `radar schedule
+  --install` (via a new `MaverickRadar_ContentGen` entry in
+  `config/schedule.yaml`) automatically generate and lint a full content
+  bundle for every signal a human has already moved to `READY_FOR_REVIEW`
+  by selecting an angle (`angle-select`). It never auto-approves a draft or
+  places anything in the publishing queue — both remain explicit human
+  actions via `draft-status approved` and `queue-add`/`queue-schedule`, as
+  required by CLAUDE.md's hybrid-model guardrails. Tested in
+  `tests/test_runner.py` (candidate generation, skipping signals without a
+  selected angle or without verified claims, and idempotency — a signal
+  that already has a bundle is not regenerated on a later run) and walked
+  end-to-end on a scratch DB.
 - **Phase 6 done:** a published post's real engagement numbers flow back into
   `performance.py` without a manual CSV step.

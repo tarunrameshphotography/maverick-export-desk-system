@@ -14,6 +14,7 @@ No API keys are needed in v1 (hybrid mode: triage and scoring are rule-based; ve
 | Step | Command |
 |---|---|
 | Morning run (collect → score → Desk Sheet) | `python -m radar run morning` → `data/desk_sheets/<date>.md` |
+| Content generation run (fills + lints bundles for signals already at READY_FOR_REVIEW) | `python -m radar run content` |
 | Why did it rank this? | `python -m radar why SIG-2026-0024` |
 | Fetch and store the primary document | `python -m radar fetch <signal>` |
 | Verification worksheet | `python -m radar verify <signal>` |
@@ -30,7 +31,7 @@ No API keys are needed in v1 (hybrid mode: triage and scoring are rule-based; ve
 | Calls Ledger | `call-add`, `call-grade`, `calls --due` |
 | Weekly metrics / monthly learning | `metrics-import week.csv`, `learn`, `learn-decide <id> --accept/--reject` |
 | Offline demo | `python -m radar run morning --sample --date 2026-09-14` |
-| Schedule (05:30, 06:30, 16:00, 21:00) | `python -m radar schedule` (dry run) → `--install` to register Windows tasks |
+| Schedule (05:30, 06:30, 16:00, 19:00, 21:00) | `python -m radar schedule` (dry run) → `--install` to register Windows tasks |
 
 ## Configuration (no logic hard-coded)
 `radar/config/`: `sources.yaml` (registry, probe notes, freshness), `scoring_weights.yaml` (Part 12 gates, weights, penalties, thresholds, disclosure triggers, model routing, flags), `categories.yaml`, `clusters.yaml`, `content_rules.yaml` (disclosure line, banned phrases, risk tiers, franchise formats), `schedule.yaml`. Secrets go in `.env` (see `.env.example`).
