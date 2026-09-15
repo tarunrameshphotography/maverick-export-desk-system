@@ -69,6 +69,7 @@ def test_failed_source_is_logged_and_does_not_stop_other_sources(conn, monkeypat
     monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, "api", _AlwaysWorks())
     monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, "pagewatch", _AlwaysWorks())
     monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, "cbic_api", _AlwaysWorks())
+    monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, "email_imap", _AlwaysWorks())
     run_id = _make_run(conn)
 
     summary = registry.run_collection(conn, run_id, use_sample=False)
@@ -108,6 +109,7 @@ def test_run_collection_retries_before_logging_a_failure(conn, monkeypatch):
     monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, "rss", _AlwaysWorks())
     monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, "api", _AlwaysWorks())
     monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, "cbic_api", _AlwaysWorks())
+    monkeypatch.setitem(registry._COLLECTORS_BY_METHOD, "email_imap", _AlwaysWorks())
     run_id = _make_run(conn)
 
     summary = registry.run_collection(conn, run_id, use_sample=False)

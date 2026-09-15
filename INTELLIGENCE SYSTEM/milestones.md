@@ -394,7 +394,87 @@ generic tokens ("trade", "exports") carry similarity; no "conflicting
 reports" detection; a signal re-opened by late coverage re-extracts entities
 but not the Desk Sheet history; saturation still counts lead-only items
 (harmless today — they are manual and rare); no primary feed yet for EU OJ,
-ePing, RASFF, GACC, CBSA/ADC.
+RASFF, GACC, CBSA/ADC.
+
+## WTO ePing inbox connector: DONE (2026-09-15)
+
+Goal: automate the source-universe expansion's flagged top-priority gap —
+ePing, "the best early-warning source per spec," was `active: false` because
+it delivers SPS/TBT notifications only as an email digest, not a feed or API.
+
+**Investigated live (15 Sep 2026):** registering at eping.wto.org confirmed
+ePing has no RSS/API alternative — signup asks for product/HS/market
+criteria and an alert frequency (daily/weekly) and only ever emails matching
+notifications. Registered a dedicated inbox, `maverickminds.cs@gmail.com`,
+for daily SPS+TBT alerts across all products/markets. **Found and worked
+around a live bug on eping.wto.org during registration:** the Country/
+territory dropdown never populated (its backing Vue `countries` array stayed
+`undefined` even though the API call behind it returned 200 with real data —
+a client-side rendering bug, not a network failure); fetched and parsed that
+endpoint's XML response directly and injected it into the page's own Vue
+instance to unblock registration, since WTO's own JS never did. No real
+digest has arrived yet (registration only just completed, and the very
+first email from WTO's account system was an *activation* link with a
+24-hour expiry — not a digest — which the founder still needed to act on
+separately).
+
+**Built:**
+- `radar/collectors/eping.py` (`method: email_imap`): IMAP-polls the inbox
+  for `UNSEEN` mail from `epingalert.org` (fetching marks it `\Seen`, which
+  doubles as "already processed" with no extra DB state); splits each
+  digest's flattened text at `G/TBT/N/...`/`G/SPS/N/...` document-symbol
+  matches into one block per notification; pulls the permalink, an
+  ePing-domain link inline via `[URL]`-bracket text, from each block; best-
+  effort date extraction (ISO or "D Month YYYY") from the surrounding text.
+  Tolerates both an HTML digest (custom no-bs4 parser, matching
+  `pagewatch.py`'s convention, explicitly skips `<style>`/`<script>`/`<head>`
+  content — caught live: the WTO activation email's inlined CSS reset would
+  otherwise have flooded every parsed block) and a plain-text one, since
+  which format ePing actually sends was unknown at build time.
+- `radar/settings.py`: `EPING_IMAP_HOST/PORT/USER/PASSWORD/SENDER_DOMAIN`,
+  following the existing `COMTRADE_API_KEY`/`ANTHROPIC_API_KEY` pattern
+  (secrets via `.env`, never hard-coded); `.env.example` documents the Gmail
+  App Password requirement (plain-password IMAP login is refused once
+  2-Step Verification is on, which is required to issue an App Password).
+- `registry.py`'s `_COLLECTORS_BY_METHOD["email_imap"]`; `sources.yaml`'s
+  `wto_eping` flipped to `method: email_imap`, `active: true` (tier
+  unchanged — `kind: primary` already defaults to `primary_official`, which
+  already fits: high discovery, primary evidence, low context/saturation).
+  Migration `008_eping_email_imap_method.sql` (SQLite can't `ALTER` a CHECK
+  constraint, so rebuilds `sources` like `004_cbic_api_method.sql` did).
+- `tests/test_eping_collector.py` (10 tests, IMAP fully mocked): HTML and
+  plain-text digests parse correctly; missing credentials raise
+  `CollectorError` before any connection attempt; connection/login/search/
+  fetch failures each raise `CollectorError`; a digest from the right sender
+  with no recognisable notification pattern raises `CollectorError` with a
+  body snippet (not a silent empty result); a notification block with no
+  extractable link is skipped rather than fabricating one; `logout()` is
+  called even when parsing fails. **Explicitly mock/fixture-only** — no real
+  ePing digest existed to test against; `sources.yaml`'s notes and the
+  module docstring both flag this and point at what to re-check once one
+  arrives.
+- `tests/test_collectors_registry.py` and `tests/test_runner.py`'s
+  all-sources-failing tests updated to also stub `email_imap`, since it's
+  now a fifth automated method alongside `rss`/`api`/`pagewatch`/`cbic_api` —
+  without the stub, those tests were making a real IMAP call against
+  whatever credentials happened to be in the runner's `.env`, non-hermetic
+  in exactly the way `cbic_api`'s equivalent tests already guarded against.
+- Suite 344 → 354.
+
+**Live-tested (15 Sep 2026, real credentials, real inbox):** IMAP login
+succeeds; `search`/`select` against the real 702-message inbox work; found
+and correctly parsed the real WTO activation email as a live smoke test of
+`_extract_bodies`/`_flatten_html` (this is what surfaced the `<style>`-leak
+bug above — first pass returned 48,984 characters, almost entirely CSS;
+after the fix, 327 clean characters). No real *digest* email has arrived
+yet — that's still pending on the founder completing account activation and
+the first daily alert being sent — so end-to-end collection into
+`raw_items` via `radar run` has not been live-tested, only fixture-tested.
+
+**Residual gap:** re-verify `eping.py`'s block/regex parser against a real
+digest once the first one arrives (`EPING_SENDER_DOMAIN` search, block
+splitting, link/date extraction) and adjust if the real layout differs from
+the documented schema this was built against.
 
 ## Not started (see roadmap.md for detail)
 - Phase 6 (partial): live metrics ingestion from platform APIs — CSV import

@@ -94,3 +94,15 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")  # unused in v1 hybrid m
 # without one — they fall back to a manual-lookup link — but auto-retrieve a
 # real trade-value figure when a key is present.
 COMTRADE_API_KEY = os.environ.get("COMTRADE_API_KEY")
+
+# WTO ePing (radar/collectors/eping.py) has no RSS/API — its SPS/TBT
+# notification alerts are only delivered as email digests to a registered
+# address, so collection means polling a dedicated inbox over IMAP. Requires
+# a Gmail App Password (not the account's normal password) when the inbox is
+# Gmail, since Gmail refuses plain-password IMAP login with 2-Step
+# Verification on. See .env.example.
+EPING_IMAP_HOST = os.environ.get("EPING_IMAP_HOST", "imap.gmail.com")
+EPING_IMAP_PORT = int(os.environ.get("EPING_IMAP_PORT", "993"))
+EPING_IMAP_USER = os.environ.get("EPING_IMAP_USER")
+EPING_IMAP_PASSWORD = os.environ.get("EPING_IMAP_PASSWORD")
+EPING_SENDER_DOMAIN = os.environ.get("EPING_SENDER_DOMAIN", "epingalert.org")

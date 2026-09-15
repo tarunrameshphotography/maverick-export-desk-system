@@ -179,9 +179,18 @@ verify only against primary sources (`verify.py`); corroboration counts
 independent origins, not syndicated copies; one event across sources and
 across runs is one signal (`dedupe.py`), with `radar provenance` showing who
 said what in which role. Full detail, live-run evidence and residual gaps in
-milestones.md. Next source work, in priority order: an inbox connector for
-WTO ePing (the best early-warning primary), an EU Official Journal feed,
-and conflicting-report detection.
+milestones.md.
+
+**WTO ePing inbox connector: done, 2026-09-15** (`radar/collectors/eping.py`,
+`method: email_imap`) — IMAP polling of a dedicated inbox
+(`maverickminds.cs@gmail.com`), registered live for daily SPS/TBT alerts,
+parsing each digest's per-notification blocks. The parser is built from
+ePing's documented schema, not a real digest (registration only just
+completed; none had arrived yet) — flagged in `sources.yaml`'s `wto_eping`
+notes and `eping.py`'s docstring; re-verify against the first real digest
+once it lands and adjust if the real layout differs. Next source work, in
+priority order: an EU Official Journal feed, and conflicting-report
+detection.
 
 ### Phase 6 — Feedback learning loop
 `desk/performance.py` and `calls_ledger.py` already implement weight-proposal

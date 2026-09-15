@@ -12,6 +12,7 @@ from dateutil import parser as dateparser
 from radar import settings
 from radar.collectors.base import CollectorError, RawItem, now_iso
 from radar.collectors.cbic import CbicCollector
+from radar.collectors.eping import EpingCollector
 from radar.collectors.federal_register import FederalRegisterCollector
 from radar.collectors.pagewatch import PagewatchCollector
 from radar.collectors.rss_collector import RssCollector
@@ -23,6 +24,7 @@ _COLLECTORS_BY_METHOD = {
     "api": FederalRegisterCollector(),
     "pagewatch": PagewatchCollector(),
     "cbic_api": CbicCollector(),
+    "email_imap": EpingCollector(),
 }
 
 MAX_RETRIES = 2

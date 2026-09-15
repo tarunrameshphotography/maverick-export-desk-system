@@ -1,10 +1,10 @@
 # Source registry — Section 4 / export_intelligence_system.md "source universe".
 # kind: primary | secondary
 # signal_type: early | confirm | enforced | context
-# method: rss | api | pagewatch | email | manual
-#   rss/api/pagewatch are automated in v1. email/manual are registered for
-#   completeness and extensibility (Section 4) but not collected until a
-#   later phase (needs an inbox connector or portal-specific scraper).
+# method: rss | api | pagewatch | cbic_api | email_imap | manual
+#   rss/api/pagewatch/cbic_api/email_imap are automated. manual is registered
+#   for completeness and extensibility (Section 4) but has no automated
+#   collector — it's intake only (radar lead-add / registry.add_manual_lead).
 # reliability_1to5: editorial judgement, used as a scoring input (evidence quality).
 #
 # Every URL marked active was probed live on 14 Sep 2026. Sources that failed
@@ -201,12 +201,22 @@ sources:
     kind: primary
     signal_type: early
     cadence: daily
-    method: email
+    method: email_imap
     country: INTL
     category: tbt_sps
     reliability_1to5: 5
-    active: false
-    notes: "Best early-warning source per spec, but delivered by email digest — needs an inbox connector (Phase 2 follow-up), not a page/RSS."
+    active: true
+    # No override tier: kind primary defaults to the primary_official tier
+    # (discovery high, context low, saturation low), which fits ePing's role
+    # as an early-warning primary source — no new tier needed.
+    notes: >
+      Automated 15 Sep 2026 (radar/collectors/eping.py) via IMAP polling of a
+      dedicated inbox (maverickminds.cs@gmail.com), registered for daily
+      SPS+TBT alerts, all products/markets. ePing has no RSS/API — only an
+      email digest — confirmed live during registration. CAVEAT: the digest
+      parser is built from ePing's documented notification schema, not from
+      a real digest (none has arrived yet); re-verify once the first one
+      lands and adjust radar/collectors/eping.py if the real layout differs.
 
   - id: wto_news
     name: WTO News

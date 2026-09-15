@@ -37,7 +37,8 @@ config file can hold it instead (scoring weights, content rules, source
 registry, clusters, schedule).
 
 ```
-radar/collectors/   RSS, Federal Register API, DGFT/CBIC page-watch + API, sample fixture,
+radar/collectors/   RSS, Federal Register API, DGFT/CBIC page-watch + API, WTO ePing
+                     (IMAP email-digest polling, since it has no feed/API), sample fixture,
                      manual lead intake (registry.add_manual_lead / `radar lead-add`)
 radar/pipeline/      normalize -> dedupe/cluster -> entities -> classify -> exposure ->
                      saturation -> scoring -> verify -> evidence -> angles -> orchestrator;
@@ -54,8 +55,8 @@ radar/db/            schema.sql (baseline) + migrations/NNN_*.sql (always applie
 radar/cli.py         every day-to-day command (see RADAR_README.md)
 ```
 
-Run `python -m pytest tests/ -q` before and after any change — **344 tests**,
-all passing as of 2026-09-15 (source-universe expansion). If a change drops that number without an
+Run `python -m pytest tests/ -q` before and after any change — **354 tests**,
+all passing as of 2026-09-15 (WTO ePing inbox connector). If a change drops that number without an
 explicit, understood reason, stop and fix it before continuing.
 
 ## Phase 3 — Publishing queue: DONE (2026-09-15)
@@ -82,6 +83,27 @@ what was and wasn't covered (the exhaustive bullet list there is aspirational;
 the delivered suite covers every state-machine transition and guardrail, not
 literally every enumerated scenario) and roadmap.md for what Phase 4 now
 plugs into.
+
+## WTO ePing inbox connector: DONE (2026-09-15)
+
+`sources.yaml`'s `wto_eping` — flagged in the source-universe expansion as
+"the best early-warning source per spec" but `active: false` because it has
+no RSS/API, only an email digest — is now automated via
+`radar/collectors/eping.py` (`method: email_imap`): IMAP-polls a dedicated
+inbox (`maverickminds.cs@gmail.com`, registered live for daily SPS+TBT
+alerts) and parses each digest's per-notification blocks. **Caveat that
+matters if you touch this file:** the parser is built from ePing's
+*documented* notification schema, not a real digest — none had arrived by
+the time this was built (registration only just completed, and the first
+email from WTO's account system was a 24-hour account-activation link, not
+a digest). `sources.yaml`'s `wto_eping` notes and `eping.py`'s module
+docstring both flag this; re-verify the parser against the first real
+digest once one lands and adjust if the real layout differs. See
+`INTELLIGENCE SYSTEM/milestones.md`'s "WTO ePing inbox connector" section
+for the full build/test detail, including a live bug found and worked
+around on eping.wto.org's own registration page during this work (its
+Country dropdown never populated — a client-side Vue rendering bug, not a
+site outage).
 
 ## The hybrid model — and the one founder-approved exception to it
 
